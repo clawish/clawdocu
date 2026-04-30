@@ -1,0 +1,86 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --color-primary: #dc2626;
+  --color-neutral: #64748b;
+}
+
+/* Prose styling for markdown */
+.prose {
+  --tw-prose-body: #374151;
+  --tw-prose-headings: #111827;
+  --tw-prose-links: #dc2626;
+  --tw-prose-bold: #111827;
+  --tw-prose-code: #dc2626;
+  --tw-prose-quotes: #374151;
+  --tw-prose-quote-borders: #e5e7eb;
+  --tw-prose-captions: #6b7280;
+  --tw-prose-hr: #e5e7eb;
+  max-width: none;
+}
+
+.prose h1 { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; }
+.prose h2 { font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
+.prose h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+.prose p { margin-bottom: 1rem; line-height: 1.75; }
+.prose ul, .prose ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+.prose li { margin-bottom: 0.25rem; }
+.prose code { 
+  background: #f8f9fa; 
+  padding: 0.2rem 0.5rem; 
+  border-radius: 4px; 
+  font-family: 'Fira Code', 'Monaco', monospace;
+  font-size: 0.9em;
+  border: 1px solid #e0e0e0;
+}
+.prose pre { 
+  background: #f8f9fa; 
+  padding: 1rem; 
+  border-radius: 8px; 
+  overflow-x: auto;
+  margin: 1rem 0;
+  border: 1px solid #e0e0e0;
+}
+.prose pre code { 
+  background: transparent; 
+  padding: 0; 
+  border: none;
+  color: #1a1a1a;
+}
+.prose a { color: #dc2626; text-decoration: underline; }
+.prose a:hover { color: #b91c1c; }
+.prose blockquote { 
+  border-left: 4px solid #e5e7eb; 
+  padding-left: 1rem; 
+  font-style: italic; 
+  color: #4b5563;
+  margin-bottom: 1rem;
+}
+.prose table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+.prose th, .prose td { border: 1px solid #e5e7eb; padding: 0.5rem; }
+.prose th { background: #f9fafb; font-weight: 600; }
+.prose img { max-width: 100%; height: auto; border-radius: 0.5rem; }
+.prose hr { border-color: #e5e7eb; margin: 2rem 0; }
+
+/* Remove typography plugin pseudo-elements */
+.prose code::before,
+.prose code::after {
+  content: none !important;
+}
+
+/* Highlight.js overrides for light theme */
+.hljs {
+  background: #f8f9fa !important;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.hljs code {
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  color: inherit !important;
+}
