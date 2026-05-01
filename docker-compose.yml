@@ -1,0 +1,17 @@
+services:
+  clawdocu:
+    image: clawish/clawdocu:latest
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NUXT_HOST=0.0.0.0
+      - NUXT_PORT=3000
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    volumes:
+      - clawdocu-data:/data
+    restart: unless-stopped
+
+volumes:
+  clawdocu-data:
