@@ -92,6 +92,8 @@ const commentPositionsVersion = ref(0)
 const selectedLineNumber = ref(1)
 // Current comment index for up/down navigation
 const currentCommentIndex = ref(0)
+// Mobile bottom tab state
+const mobileTab = ref<'files' | 'comments' | null>(null)
 
 // Find line number from the current DOM selection using data-line attributes
 function findLineNumberFromDOM(): number {
@@ -487,35 +489,36 @@ function showFileMenu(event: MouseEvent, item: any) {
 </script>
 
 <template>
-  <div class="flex-1 flex min-h-0">
-    <!-- File Tree Sidebar -->
+  <div class="flex-1 flex min-h-0 relative">
+    <!-- File Tree Sidebar (desktop) -->
     <FileTree 
       :projectId="projectId"
       v-model:sidebarOpen="sidebarOpen"
       @selectFile="handleSelectFile"
       @showFileMenu="showFileMenu"
+      class="hidden md:block"
     />
 
     <!-- Main Content Area with Comments -->
-    <div class="flex-1 flex min-w-0 flex-col">
+    <div class="flex-1 flex min-w-0 flex-col pb-14 md:pb-0">
       <!-- File Header — spans content + comments columns -->
       <div class="flex shrink-0 border-b border-gray-200 bg-white overflow-y-auto" style="scrollbar-gutter: stable">
         <!-- Left: file path + actions -->
         <div class="flex-1 min-w-0 flex items-center justify-between px-4 py-3">
-          <div class="flex items-center gap-2 text-sm">
-            <span class="text-gray-400">{{ project?.fullName }}</span>
+          <div class="flex items-center gap-2 text-sm overflow-x-auto">
+            <span class="text-gray-400 whitespace-nowrap">{{ project?.fullName }}</span>
             <span class="text-gray-300">/</span>
             <span 
               v-for="(segment, i) in filePathSegments" 
               :key="i" 
               class="flex items-center gap-2"
             >
-              <span class="text-gray-700">{{ segment }}</span>
+              <span class="text-gray-700 whitespace-nowrap">{{ segment }}</span>
               <span v-if="i < filePathSegments.length - 1" class="text-gray-300">/</span>
             </span>
           </div>
           
-          <div class="flex items-center gap-3">
+          <div class="hidden md:flex items-center gap-3">
             <!-- Sync button -->
             <button 
               @click="handleSync"
@@ -562,12 +565,13 @@ function showFileMenu(event: MouseEvent, item: any) {
           </div>
         </div>
 
-        <!-- Right: Comments title with navigation (same width as comments column) -->
+        <!-- Right: Comments title with navigation (desktop, same width as comments column) -->
         <CommentsHeader
           :comments="comments"
           :sortedComments="sortedComments"
           :currentCommentIndex="currentCommentIndex"
           @navigate="navigateComment"
+          class="hidden md:block"
         />
       </div>
 
@@ -575,7 +579,7 @@ function showFileMenu(event: MouseEvent, item: any) {
       <div ref="scrollContainerRef" class="flex-1 overflow-auto bg-white" style="scrollbar-gutter: stable">
         <div class="flex min-h-full">
           <!-- File Content -->
-          <div ref="contentRef" class="flex-1 min-w-0 p-6 bg-white">
+          <div ref="contentRef" class="flex-1 min-w-0 p-4 md:p-6 bg-white">
             <div v-if="loading" class="text-gray-400 text-center py-8">Loading...</div>
             
             <!-- Markdown Rendered -->
@@ -587,10 +591,10 @@ function showFileMenu(event: MouseEvent, item: any) {
             />
             
             <!-- Code View -->
-            <pre v-else class="text-sm leading-6 hljs"><code class="language-typescript"><template v-for="(line, i) in highlightedLines" :key="i"><span class="block" :class="commentedLines.has(i + 1) ? 'bg-red-50 border-l-2 border-red-400' : ''"><span class="text-gray-400 select-none pr-4 inline-block w-12 text-right">{{ i + 1 }}</span><span v-html="line || '&nbsp;'"></span></span></template></code></pre>
+            <pre v-else class="text-sm leading-6 hljs overflow-x-auto"><code class="language-typescript"><template v-for="(line, i) in highlightedLines" :key="i"><span class="block" :class="commentedLines.has(i + 1) ? 'bg-red-50 border-l-2 border-red-400' : ''"><span class="text-gray-400 select-none pr-4 inline-block w-12 text-right">{{ i + 1 }}</span><span v-html="line || '&nbsp;'"></span></span></template></code></pre>
           </div>
 
-          <!-- Comments Column (scrolls with content) -->
+          <!-- Comments Column (desktop, scrolls with content) -->
           <CommentsSidebar
             v-model:commentText="commentText"
             :comments="comments"
@@ -605,11 +609,123 @@ function showFileMenu(event: MouseEvent, item: any) {
             @save="handleSaveComment"
             @cancel="closeCommentBox"
             @delete="handleDeleteComment"
-              @clickComment="handleClickComment"
+            @clickComment="handleClickComment"
+            class="hidden md:block"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Bottom Tabs -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex md:hidden z-40">
+      <button 
+        @click="mobileTab = mobileTab === 'files' ? null : 'files'"
+        class="flex-1 py-3 flex items-center justify-center gap-2 text-sm"
+        :class="mobileTab === 'files' ? 'text-red-600 bg-red-50' : 'text-gray-600'"
+      >
+        <Icon name="i-lucide-folder" class="w-5 h-5" />
+        Files
+      </button>
+      <button 
+        @click="mobileTab = mobileTab === 'comments' ? null : 'comments'"
+        class="flex-1 py-3 flex items-center justify-center gap-2 text-sm relative"
+        :class="mobileTab === 'comments' ? 'text-red-600 bg-red-50' : 'text-gray-600'"
+      >
+        <Icon name="i-lucide-message-square" class="w-5 h-5" />
+        Comments
+        <span 
+          v-if="comments.length > 0" 
+          class="absolute top-2 right-1/4 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
+        >
+          {{ comments.length }}
+        </span>
+      </button>
+    </div>
+
+    <!-- Mobile Files Panel (slideover from bottom) -->
+    <Teleport to="body">
+      <div 
+        v-if="mobileTab === 'files'"
+        class="fixed inset-0 z-50 md:hidden"
+      >
+        <!-- Backdrop -->
+        <div 
+          class="absolute inset-0 bg-black/50" 
+          @click="mobileTab = null"
+        />
+        <!-- Panel -->
+        <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[70vh] overflow-hidden flex flex-col">
+          <div class="flex items-center justify-between p-4 border-b">
+            <h3 class="font-semibold">Files</h3>
+            <button @click="mobileTab = null" class="p-1 text-gray-400 hover:text-gray-600">
+              <Icon name="i-lucide-x" class="w-5 h-5" />
+            </button>
+          </div>
+          <div class="overflow-y-auto flex-1">
+            <FileTree 
+              :projectId="projectId"
+              :sidebarOpen="true"
+              @selectFile="handleSelectFile; mobileTab = null"
+              @showFileMenu="showFileMenu"
             />
           </div>
         </div>
       </div>
+    </Teleport>
+
+    <!-- Mobile Comments Panel (slideover from bottom) -->
+    <Teleport to="body">
+      <div 
+        v-if="mobileTab === 'comments'"
+        class="fixed inset-0 z-50 md:hidden"
+      >
+        <!-- Backdrop -->
+        <div 
+          class="absolute inset-0 bg-black/50" 
+          @click="mobileTab = null"
+        />
+        <!-- Panel -->
+        <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[70vh] overflow-hidden flex flex-col">
+          <div class="flex items-center justify-between p-4 border-b">
+            <h3 class="font-semibold">Comments ({{ comments.length }})</h3>
+            <button @click="mobileTab = null" class="p-1 text-gray-400 hover:text-gray-600">
+              <Icon name="i-lucide-x" class="w-5 h-5" />
+            </button>
+          </div>
+          <div class="overflow-y-auto flex-1 p-4">
+            <!-- Comment Input Box (mobile) -->
+            <CommentInput 
+              v-if="showCommentBox"
+              v-model:commentText="commentText"
+              :selectedText="selectedText"
+              :top="0"
+              position="static"
+              @save="handleSaveComment"
+              @cancel="closeCommentBox"
+            />
+            
+            <!-- Comments List (mobile) -->
+            <div v-if="sortedComments.length > 0" class="space-y-3">
+              <div 
+                v-for="(comment, idx) in sortedComments" 
+                :key="comment.id"
+                class="p-3 bg-gray-50 rounded-lg border"
+                :class="idx === currentCommentIndex ? 'border-red-300 bg-red-50' : 'border-gray-200'"
+                @click="handleClickComment(comment); mobileTab = null"
+              >
+                <div class="text-xs text-gray-400 mb-1">Line {{ comment.lineNumber }}</div>
+                <div class="text-sm text-gray-700">{{ comment.text }}</div>
+              </div>
+            </div>
+            
+            <!-- Empty state -->
+            <div v-else-if="!showCommentBox" class="text-gray-400 text-sm text-center py-8">
+              Select text in the file to add a comment.
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Text Selection Toolbar -->
     <Teleport to="body">
