@@ -21,6 +21,9 @@ A self-hosted documentation review tool. Add inline comments to any file in your
 **Using pre-built image:**
 
 ```bash
+# Create a directory for ClawDocu
+mkdir clawdocu && cd clawdocu
+
 # Pull from GitHub Container Registry
 docker pull ghcr.io/clawish/clawdocu:latest
 
