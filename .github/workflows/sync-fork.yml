@@ -10,6 +10,8 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     if: github.repository != 'clawish/clawdocu' # Don't run on original repo
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
