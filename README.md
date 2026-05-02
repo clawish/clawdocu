@@ -10,7 +10,7 @@ A Claw-native documentation review tool. Make suggestions directly on docs, let 
 - 🤖 **Claw-Friendly Access** - Comments are stored as plain text format locally in the system. The Claw reads them directly - no need fetch from remote.
 - 🌐 **Access Anywhere** - Comment and discuss your docs within Telegram or any other Claw chat app. No separate app switching.
 - 📄 **Any File Type** - Comment on code, markdown, config files, or any text file. Not just code - all your documentation.
-- 🔄 **Version Controlled** - Everything stored in your repo. Your Claw has the same access as you - no sync needed.
+- 🔄 **GitHub Integration** - Connect your git repository. Browse files, add comments within your repo directly.
 - 🔐 **Self-Hosted** - Deploy on your own VPS. Your code and comments stay on your infrastructure.
 
 ## Installation
