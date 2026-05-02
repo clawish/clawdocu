@@ -18,31 +18,32 @@ A self-hosted documentation review tool. Add inline comments to any file in your
 
 ### Option 1: Docker (Recommended)
 
-**Quick Start:**
+**Using pre-built image:**
 
 ```bash
-# Clone the repo
-git clone https://github.com/clawish/clawdocu.git
-cd clawdocu
+# Pull from GitHub Container Registry
+docker pull ghcr.io/clawish/clawdocu:latest
 
-# Copy environment template
-cp .env.example .env
+# Create .env file
+cat > .env << EOF
+ADMIN_PASSWORD=your_secure_password
+GITHUB_TOKEN=ghp_your_token
+EOF
 
-# Edit .env with your values
-# ADMIN_PASSWORD=your_secure_password
-# GITHUB_TOKEN=ghp_your_token
-
-# Start with Docker Compose
-docker compose up -d
+# Run
+docker run -d -p 3000:3000 --env-file .env ghcr.io/clawish/clawdocu:latest
 ```
 
 Open http://localhost:3000
 
-**Using pre-built image (coming soon):**
+**Or build from source:**
 
 ```bash
-docker pull clawish/clawdocu:latest
-docker run -d -p 3000:3000 --env-file .env clawish/clawdocu:latest
+git clone https://github.com/clawish/clawdocu.git
+cd clawdocu
+cp .env.example .env
+# Edit .env with your values
+docker compose up -d
 ```
 
 ### Option 2: Git Clone + npm
