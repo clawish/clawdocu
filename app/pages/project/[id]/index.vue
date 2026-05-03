@@ -25,12 +25,11 @@ const md = new MarkdownIt({
 md.core.ruler.push('line_numbers', (state) => {
   for (const token of state.tokens) {
     if (token.map && token.type.endsWith('_open')) {
-      token.attrSet('data-line', String(token.map[0] + 1)) // 1-indexed to match findLineNumber
+      token.attrSet('data-line', String(token.map[0] + 1))
     }
   }
 })
 
-// Import highlight.js styles
 import 'highlight.js/styles/github.css'
 
 definePageMeta({
@@ -40,7 +39,13 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const projectId = computed(() => route.params.id as string)
-const filePath = computed(() => (route.params.path as string[])?.join('/') || '')
+const filePath = computed(() => {
+  const path = route.params.path
+  if (Array.isArray(path)) {
+    return path.join('/')
+  }
+  return path || ''
+})
 
 // Use composables
 const {
@@ -86,26 +91,21 @@ const scrollContainerRef = ref(null)
 const sidebarOpen = ref(true)
 const showToolbar = ref(false)
 const toolbarPosition = ref({ top: 0, left: 0 })
-// Bump this to force getCommentTop re-computation after mode change or scroll
 const commentPositionsVersion = ref(0)
-// Line number captured at selection time (from DOM, not from text search)
 const selectedLineNumber = ref(1)
-// Current comment index for up/down navigation
 const currentCommentIndex = ref(0)
-// Mobile bottom tab state
 const mobileTab = ref<'files' | 'comments' | null>(null)
 
 // Computed: has file selected
 const hasFile = computed(() => !!filePath.value)
 
-// Find line number from the current DOM selection using data-line attributes
+// Find line number from DOM
 function findLineNumberFromDOM(): number {
   if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value) {
     const selection = window.getSelection()
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0)
       let node: Node | null = range.startContainer
-      // Walk up from selection start to find the closest element with data-line
       while (node && node !== markdownRef.value) {
         if (node instanceof Element && node.hasAttribute('data-line')) {
           return parseInt(node.getAttribute('data-line') || '1', 10)
@@ -114,13 +114,11 @@ function findLineNumberFromDOM(): number {
       }
     }
   }
-  return 0 // 0 means DOM lookup failed, fall back to text search
+  return 0
 }
 
-// Text selection from VueUse
 const textSelection = useTextSelection()
 
-// Computed
 const isMarkdown = computed(() => {
   const ext = selectedFile.value?.name?.split('.').pop()?.toLowerCase()
   return ext === 'md' || ext === 'markdown'
@@ -130,13 +128,11 @@ const filePathSegments = computed(() => {
   return selectedFile.value?.path?.split('/').filter(Boolean) || []
 })
 
-// Get file extension for syntax highlighting
 const fileExtension = computed(() => {
   const ext = selectedFile.value?.name?.split('.').pop()?.toLowerCase()
   return ext || 'text'
 })
 
-// Get language for highlight.js
 const getHighlightLanguage = (ext: string): string => {
   const langMap: Record<string, string> = {
     'ts': 'typescript',
@@ -168,28 +164,19 @@ const getHighlightLanguage = (ext: string): string => {
   return langMap[ext] || 'plaintext'
 }
 
-// Highlighted code lines
 const highlightedLines = computed(() => {
   if (!fileContent.value) return []
-  
   const lang = getHighlightLanguage(fileExtension.value)
-  
-  // Highlight entire file, then split by line
   try {
     const highlighted = hljs.highlight(fileContent.value, { language: lang, ignoreIllegals: true }).value
-    // Split by <br> or newlines in the highlighted output
     return highlighted.split('\n')
   } catch (e) {
     return fileContent.value.split('\n')
   }
 })
 
-// Raw lines for height calculation
-const lines = computed(() => {
-  return fileContent.value.split('\n')
-})
+const lines = computed(() => fileContent.value.split('\n'))
 
-// Reactive content height for comments column minHeight sync
 const contentHeight = ref(0)
 
 function updateContentHeight() {
@@ -198,7 +185,6 @@ function updateContentHeight() {
   }
 }
 
-// Lines with comments (for highlighting)
 const commentedLines = computed(() => {
   const lineSet = new Set<number>()
   for (const comment of comments.value) {
@@ -209,21 +195,16 @@ const commentedLines = computed(() => {
   return lineSet
 })
 
-// Get the vertical position for a comment relative to the scroll container's content top
 function getPositionByLineNumber(lineNumber: number): number {
   if (!contentRef.value || !scrollContainerRef.value) return 0
-
   const containerRect = scrollContainerRef.value.getBoundingClientRect()
 
   if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value) {
-    // For rendered markdown, find the block element with matching data-line
-    // data-line attributes are 1-indexed (set by our markdown-it plugin)
     const el = markdownRef.value.querySelector(`[data-line="${lineNumber}"]`)
     if (el) {
       const rect = el.getBoundingClientRect()
       return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
     }
-    // If exact line not found, find the nearest earlier line
     const allLineEls = markdownRef.value.querySelectorAll('[data-line]')
     let closestEl: Element | null = null
     let closestLine = 0
@@ -241,7 +222,6 @@ function getPositionByLineNumber(lineNumber: number): number {
     return 0
   }
 
-  // For code/raw view, find the line span by line number
   const codeBlock = contentRef.value.querySelector('pre code')
   if (codeBlock) {
     const lineSpans = codeBlock.querySelectorAll('.block')
@@ -251,14 +231,10 @@ function getPositionByLineNumber(lineNumber: number): number {
       return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
     }
   }
-
-  // Fallback: compute from line number assuming 24px line height + 24px padding
   return (lineNumber - 1) * 24 + 24
 }
 
-// Get comment position — recalculated on mode change via commentPositionsVersion
 const getCommentTop = (comment: any): number => {
-  // Touch version ref to make this reactive on mode switch
   void commentPositionsVersion.value
   return getPositionByLineNumber(comment.lineNumber || 1)
 }
@@ -267,14 +243,11 @@ const getCommentTop = (comment: any): number => {
 onMounted(async () => {
   await loadProject()
   await loadTree(projectId.value)
-  
-  // Load file from URL path if exists
   if (filePath.value) {
     await loadFileFromPath(filePath.value)
   }
 })
 
-// Watch for route changes
 watch(filePath, async (newPath, oldPath) => {
   if (newPath && newPath !== oldPath) {
     await loadFileFromPath(newPath)
@@ -310,8 +283,6 @@ async function loadFile(item: { path: string; name: string; type: string }) {
       query: { path: item.path, branch: selectedBranch.value }
     })
     fileContent.value = response.content || ''
-    
-    // Load comments for this file
     await loadComments(projectId.value, item.path)
   } catch (e) {
     console.error('Failed to load file:', e)
@@ -324,14 +295,12 @@ async function loadFile(item: { path: string; name: string; type: string }) {
 
 function handleSelectFile(item: { path: string; name: string; type: string }) {
   if (item.type === 'file') {
-    // Update URL
     router.push(`/project/${projectId.value}/${item.path}`)
   } else {
     toggleFolder(item.path)
   }
 }
 
-// Text selection handling
 watch(
   () => textSelection.text.value,
   (text) => {
@@ -340,27 +309,21 @@ watch(
       const rects = textSelection.rects.value
       if (rects && rects.length > 0) {
         const rect = rects[0]
-        
         toolbarPosition.value = {
           top: rect.top - 45,
           left: rect.left + rect.width / 2 - 50
         }
-        
-        // Calculate comment box top relative to scroll container content area
         if (scrollContainerRef.value) {
           const containerRect = scrollContainerRef.value.getBoundingClientRect()
           commentBoxTop.value = rect.top - containerRect.top + scrollContainerRef.value.scrollTop
         }
       }
-
-      // Determine line number at selection time when the DOM selection is still valid
       const domLine = findLineNumberFromDOM()
       if (domLine > 0) {
         selectedLineNumber.value = domLine
       } else {
         selectedLineNumber.value = findLineNumber(text)
       }
-
       showToolbar.value = true
     } else {
       showToolbar.value = false
@@ -373,7 +336,6 @@ function openCommentBoxLocal() {
   openCommentBox(selectedText.value, commentBoxTop.value)
 }
 
-// When markdown mode changes, recalculate comment positions and update comment box position
 watch(markdownMode, async () => {
   await nextTick()
   commentPositionsVersion.value++
@@ -383,7 +345,6 @@ watch(markdownMode, async () => {
 async function handleSaveComment() {
   if (!commentText.value.trim() || !selectedFile.value?.path) return
   await saveComment(projectId.value, selectedFile.value.path, selectedLineNumber.value)
-  // Refresh comment counts in sidebar and positions
   await loadCommentCounts(projectId.value)
   await nextTick()
   commentPositionsVersion.value++
@@ -405,32 +366,23 @@ async function handleSync() {
 
 function findLineNumber(text: string): number {
   if (!fileContent.value || !text) return 1
-  
-  // Try exact match first
   let index = fileContent.value.indexOf(text)
   if (index !== -1) {
     return fileContent.value.substring(0, index).split('\n').length
   }
-  
-  // For markdown rendered mode, try to find by trimming whitespace
   const trimmedText = text.trim()
   index = fileContent.value.indexOf(trimmedText)
   if (index !== -1) {
     return fileContent.value.substring(0, index).split('\n').length
   }
-  
-  // Try case-insensitive search
   const lowerContent = fileContent.value.toLowerCase()
   const lowerText = text.toLowerCase()
   index = lowerContent.indexOf(lowerText)
   if (index !== -1) {
     return fileContent.value.substring(0, index).split('\n').length
   }
-  
-  console.log('[findLineNumber] Could not find text:', text)
   return 1
 }
-
 
 function handleClickComment(comment: any) {
   const idx = sortedComments.value.findIndex(c => c.id === comment.id)
@@ -440,18 +392,15 @@ function handleClickComment(comment: any) {
 
 async function handleDeleteComment(commentId: string) {
   await deleteComment(projectId.value, commentId)
-  // Refresh comment counts in sidebar and positions
   await loadCommentCounts(projectId.value)
   await nextTick()
   commentPositionsVersion.value++
   updateContentHeight()
-  // Clamp index after deletion
   if (currentCommentIndex.value >= sortedComments.value.length) {
     currentCommentIndex.value = sortedComments.value.length - 1
   }
 }
 
-// Scroll the content area to show the line for a given comment
 function scrollToCommentLine(comment: any) {
   const top = getPositionByLineNumber(comment.lineNumber || 1)
   if (scrollContainerRef.value) {
@@ -459,35 +408,27 @@ function scrollToCommentLine(comment: any) {
   }
 }
 
-// Navigate to next/previous comment and scroll content to it
 function navigateComment(direction: 1 | -1) {
   const total = sortedComments.value.length
   if (total === 0) return
-
   let newIndex = currentCommentIndex.value + direction
-  
-  // Wrap around
   if (newIndex < 0) newIndex = total - 1
   if (newIndex >= total) newIndex = 0
-
   currentCommentIndex.value = newIndex
-
   const comment = sortedComments.value[currentCommentIndex.value]
   if (comment) {
     scrollToCommentLine(comment)
   }
 }
 
-// Reset comment index when comments change
 watch(() => comments.value.length, () => {
   if (currentCommentIndex.value >= comments.value.length) {
     currentCommentIndex.value = Math.max(0, comments.value.length - 1)
   }
 })
 
-// File menu
 function showFileMenu(event: MouseEvent, item: any) {
-  // TODO: implement context menu
+  // TODO
 }
 </script>
 
@@ -504,26 +445,28 @@ function showFileMenu(event: MouseEvent, item: any) {
 
     <!-- Main Content Area with Comments -->
     <div class="flex-1 flex min-w-0 flex-col pb-14 md:pb-0">
-      <!-- File Header — spans content + comments columns -->
+      <!-- File Header -->
       <div class="flex shrink-0 border-b border-gray-200 bg-white overflow-y-auto" style="scrollbar-gutter: stable">
-        <!-- Left: file path + actions -->
         <div class="flex-1 min-w-0 flex items-center justify-between px-4 py-3">
           <div class="flex items-center gap-2 text-sm overflow-x-auto">
             <span class="text-gray-400 whitespace-nowrap">{{ project?.fullName }}</span>
             <span class="text-gray-300">/</span>
-            <span 
-              v-for="(segment, i) in filePathSegments" 
-              :key="i" 
-              class="flex items-center gap-2"
-            >
-              <span class="text-gray-700 whitespace-nowrap">{{ segment }}</span>
-              <span v-if="i < filePathSegments.length - 1" class="text-gray-300">/</span>
-            </span>
+            <template v-if="hasFile">
+              <span 
+                v-for="(segment, i) in filePathSegments" 
+                :key="i" 
+                class="flex items-center gap-2"
+              >
+                <span class="text-gray-700 whitespace-nowrap">{{ segment }}</span>
+                <span v-if="i < filePathSegments.length - 1" class="text-gray-300">/</span>
+              </span>
+            </template>
+            <span v-else class="text-gray-500">Select a file to view</span>
           </div>
           
           <div class="hidden md:flex items-center gap-3">
-            <!-- Sync button -->
             <button 
+              v-if="hasFile"
               @click="handleSync"
               class="px-3 py-1 text-sm rounded-lg transition-colors flex items-center gap-1"
               :class="[
@@ -537,8 +480,7 @@ function showFileMenu(event: MouseEvent, item: any) {
               {{ syncing ? 'Syncing...' : 'Sync' }}
             </button>
 
-            <!-- Markdown mode toggle -->
-            <div v-if="isMarkdown" class="flex items-center gap-2">
+            <div v-if="hasFile && isMarkdown" class="flex items-center gap-2">
               <button 
                 @click="markdownMode = 'render'"
                 class="px-3 py-1 text-sm rounded-lg transition-colors"
@@ -555,9 +497,8 @@ function showFileMenu(event: MouseEvent, item: any) {
               </button>
             </div>
 
-            <!-- View on GitHub -->
             <a 
-              v-if="project?.fullName"
+              v-if="hasFile && project?.fullName"
               :href="`https://github.com/${project.fullName}/blob/main/${filePath}`" 
               target="_blank"
               class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
@@ -568,8 +509,8 @@ function showFileMenu(event: MouseEvent, item: any) {
           </div>
         </div>
 
-        <!-- Right: Comments title with navigation (desktop, same width as comments column) -->
         <CommentsHeader
+          v-if="hasFile"
           :comments="comments"
           :sortedComments="sortedComments"
           :currentCommentIndex="currentCommentIndex"
@@ -578,7 +519,7 @@ function showFileMenu(event: MouseEvent, item: any) {
         />
       </div>
 
-      <!-- Scrollable Content + Comments Container (single scroll) -->
+      <!-- Scrollable Content + Comments Container -->
       <div ref="scrollContainerRef" class="flex-1 overflow-auto bg-white" style="scrollbar-gutter: stable">
         <div class="flex min-h-full">
           <!-- File Content -->
@@ -601,11 +542,12 @@ function showFileMenu(event: MouseEvent, item: any) {
             />
             
             <!-- Code View -->
-            <pre v-else class="text-sm leading-6 hljs overflow-x-auto"><code class="language-typescript"><template v-for="(line, i) in highlightedLines" :key="i"><span class="block" :class="commentedLines.has(i + 1) ? 'bg-red-50 border-l-2 border-red-400' : ''"><span class="text-gray-400 select-none pr-4 inline-block w-12 text-right">{{ i + 1 }}</span><span v-html="line || '&nbsp;'"></span></span></template></code></pre>
+            <pre v-else-if="hasFile" class="text-sm leading-6 hljs overflow-x-auto"><code class="language-typescript"><template v-for="(line, i) in highlightedLines" :key="i"><span class="block" :class="commentedLines.has(i + 1) ? 'bg-red-50 border-l-2 border-red-400' : ''"><span class="text-gray-400 select-none pr-4 inline-block w-12 text-right">{{ i + 1 }}</span><span v-html="line || '&nbsp;'"></span></span></template></code></pre>
           </div>
 
-          <!-- Comments Column (desktop, scrolls with content) -->
+          <!-- Comments Column (desktop) -->
           <CommentsSidebar
+            v-if="hasFile"
             v-model:commentText="commentText"
             :comments="comments"
             :sortedComments="sortedComments"
@@ -622,6 +564,16 @@ function showFileMenu(event: MouseEvent, item: any) {
             @clickComment="handleClickComment"
             class="hidden md:block"
           />
+          
+          <!-- Empty Comments Sidebar (no file) -->
+          <aside v-else class="hidden md:block w-80 shrink-0 border-l border-gray-200 bg-white">
+            <div class="p-4">
+              <h3 class="text-xs font-semibold text-gray-500 uppercase mb-3">Comments</h3>
+              <div class="text-gray-400 text-sm text-center py-8">
+                Select a file to view comments.
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </div>
@@ -652,18 +604,13 @@ function showFileMenu(event: MouseEvent, item: any) {
       </button>
     </div>
 
-    <!-- Mobile Files Panel (slideover from bottom) -->
+    <!-- Mobile Files Panel -->
     <Teleport to="body">
       <div 
         v-if="mobileTab === 'files'"
         class="fixed inset-0 z-50 md:hidden"
       >
-        <!-- Backdrop -->
-        <div 
-          class="absolute inset-0 bg-black/50" 
-          @click="mobileTab = null"
-        />
-        <!-- Panel -->
+        <div class="absolute inset-0 bg-black/50" @click="mobileTab = null" />
         <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[70vh] overflow-hidden flex flex-col">
           <div class="flex items-center justify-between p-4 border-b">
             <h3 class="font-semibold">Files</h3>
@@ -675,7 +622,7 @@ function showFileMenu(event: MouseEvent, item: any) {
             <FileTree 
               :projectId="projectId"
               :sidebarOpen="true"
-              @selectFile="handleSelectFile; mobileTab = null"
+              @selectFile="(item) => { handleSelectFile(item); mobileTab = null }"
               @showFileMenu="showFileMenu"
             />
           </div>
@@ -683,18 +630,13 @@ function showFileMenu(event: MouseEvent, item: any) {
       </div>
     </Teleport>
 
-    <!-- Mobile Comments Panel (slideover from bottom) -->
+    <!-- Mobile Comments Panel -->
     <Teleport to="body">
       <div 
         v-if="mobileTab === 'comments'"
         class="fixed inset-0 z-50 md:hidden"
       >
-        <!-- Backdrop -->
-        <div 
-          class="absolute inset-0 bg-black/50" 
-          @click="mobileTab = null"
-        />
-        <!-- Panel -->
+        <div class="absolute inset-0 bg-black/50" @click="mobileTab = null" />
         <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[70vh] overflow-hidden flex flex-col">
           <div class="flex items-center justify-between p-4 border-b">
             <h3 class="font-semibold">Comments ({{ comments.length }})</h3>
@@ -703,7 +645,6 @@ function showFileMenu(event: MouseEvent, item: any) {
             </button>
           </div>
           <div class="overflow-y-auto flex-1 p-4">
-            <!-- Comment Input Box (mobile) -->
             <CommentInput 
               v-if="showCommentBox"
               v-model:commentText="commentText"
@@ -714,7 +655,6 @@ function showFileMenu(event: MouseEvent, item: any) {
               @cancel="closeCommentBox"
             />
             
-            <!-- Comments List (mobile) -->
             <div v-if="sortedComments.length > 0" class="space-y-3">
               <div 
                 v-for="(comment, idx) in sortedComments" 
@@ -728,7 +668,6 @@ function showFileMenu(event: MouseEvent, item: any) {
               </div>
             </div>
             
-            <!-- Empty state -->
             <div v-else-if="!showCommentBox" class="text-gray-400 text-sm text-center py-8">
               Select text in the file to add a comment.
             </div>
