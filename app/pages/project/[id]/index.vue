@@ -41,8 +41,8 @@ const router = useRouter()
 const projectId = computed(() => route.params.id as string)
 const filePath = computed(() => {
   const path = route.params.path
-  console.log('[Project Page] route.params:', route.params)
-  console.log('[Project Page] path:', path)
+  console.log('[Project Page - index] route.params:', route.params)
+  console.log('[Project Page - index] path:', path)
   if (Array.isArray(path)) {
     return path.join('/')
   }
@@ -443,9 +443,9 @@ function showFileMenu(event: MouseEvent, item: any) {
 
 <template>
   <div class="flex-1 flex min-h-0 relative">
-    <!-- DEBUG: Show route info -->
+    <!-- DEBUG: Show route info (index page) -->
     <div class="fixed top-0 left-0 right-0 bg-yellow-100 p-2 text-xs z-50">
-      DEBUG: route.params = {{ JSON.stringify(route.params) }} | projectId = {{ projectId }} | filePath = {{ filePath }} | hasFile = {{ hasFile }}
+      DEBUG (index): route.params = {{ JSON.stringify(route.params) }} | projectId = {{ projectId }} | filePath = {{ filePath }} | hasFile = {{ hasFile }}
     </div>
     
     <!-- File Tree Sidebar (desktop) -->
