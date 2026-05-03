@@ -41,10 +41,19 @@ const router = useRouter()
 const projectId = computed(() => route.params.id as string)
 const filePath = computed(() => {
   const path = route.params.path
+  console.log('[Project Page] route.params:', route.params)
+  console.log('[Project Page] path:', path)
   if (Array.isArray(path)) {
     return path.join('/')
   }
   return path || ''
+})
+
+// Log on mount
+onMounted(() => {
+  console.log('[Project Page] Mounted')
+  console.log('[Project Page] projectId:', projectId.value)
+  console.log('[Project Page] filePath:', filePath.value)
 })
 
 // Use composables
