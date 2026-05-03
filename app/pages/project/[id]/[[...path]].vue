@@ -443,6 +443,11 @@ function showFileMenu(event: MouseEvent, item: any) {
 
 <template>
   <div class="flex-1 flex min-h-0 relative">
+    <!-- DEBUG: Show route info -->
+    <div class="fixed top-0 left-0 right-0 bg-yellow-100 p-2 text-xs z-50">
+      DEBUG: route.params = {{ JSON.stringify(route.params) }} | projectId = {{ projectId }} | filePath = {{ filePath }} | hasFile = {{ hasFile }}
+    </div>
+    
     <!-- File Tree Sidebar (desktop) -->
     <FileTree 
       :projectId="projectId"
