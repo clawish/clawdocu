@@ -78,7 +78,7 @@ const {
 // Local state
 const project = ref(null)
 const fileContent = ref('')
-const loading = ref(true)
+const loading = ref(false)
 const markdownMode = ref('render')
 const markdownRef = ref(null)
 const contentRef = ref(null)
@@ -94,6 +94,9 @@ const selectedLineNumber = ref(1)
 const currentCommentIndex = ref(0)
 // Mobile bottom tab state
 const mobileTab = ref<'files' | 'comments' | null>(null)
+
+// Computed: has file selected
+const hasFile = computed(() => !!filePath.value)
 
 // Find line number from the current DOM selection using data-line attributes
 function findLineNumberFromDOM(): number {
@@ -265,15 +268,15 @@ onMounted(async () => {
   await loadProject()
   await loadTree(projectId.value)
   
-  // Load file from URL path
+  // Load file from URL path if exists
   if (filePath.value) {
     await loadFileFromPath(filePath.value)
   }
 })
 
 // Watch for route changes
-watch(filePath, async (newPath) => {
-  if (newPath) {
+watch(filePath, async (newPath, oldPath) => {
+  if (newPath && newPath !== oldPath) {
     await loadFileFromPath(newPath)
   }
 })
@@ -580,7 +583,14 @@ function showFileMenu(event: MouseEvent, item: any) {
         <div class="flex min-h-full">
           <!-- File Content -->
           <div ref="contentRef" class="flex-1 min-w-0 p-4 md:p-6 bg-white">
+            <!-- Loading -->
             <div v-if="loading" class="text-gray-400 text-center py-8">Loading...</div>
+            
+            <!-- Empty State (no file selected) -->
+            <div v-else-if="!hasFile" class="text-gray-400 text-center py-16">
+              <Icon name="i-lucide-file-text" class="w-16 h-16 mx-auto mb-4 opacity-50" />
+              <p>Select a file from the tree to view its contents</p>
+            </div>
             
             <!-- Markdown Rendered -->
             <div 
