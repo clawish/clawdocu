@@ -74,6 +74,7 @@ const sidebarRef = ref(null)
 const sidebarOpen = ref(true)
 const showToolbar = ref(false)
 const toolbarPosition = ref({ top: 0, left: 0 })
+const mobileTab = ref<'files' | 'comments' | null>(null)
 
 // Text selection from VueUse
 const textSelection = useTextSelection()
@@ -245,29 +246,26 @@ async function onBranchChange() {
     />
 
     <!-- Main Content Area -->
-    <div class="flex-1 flex min-w-0">
-      <!-- Content Section -->
-      <div class="flex-1 min-w-0 flex flex-col">
-        <!-- File Header -->
-        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white shrink-0">
-          <div class="flex items-center gap-2 text-sm">
-            <span class="text-gray-400">{{ project?.fullName }}</span>
-            <span class="text-gray-300">/</span>
-            <span class="text-gray-500">Select a file to view</span>
-          </div>
-        </div>
-
-        <!-- Empty State -->
-        <div class="flex-1 flex items-center justify-center">
-          <div class="text-gray-400 text-center">
-            <Icon name="i-lucide-file-text" class="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <p>Select a file from the tree to view its contents</p>
-          </div>
+    <div class="flex-1 flex min-w-0 flex-col pb-14 md:pb-0">
+      <!-- File Header -->
+      <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white shrink-0">
+        <div class="flex items-center gap-2 text-sm">
+          <span class="text-gray-400">{{ project?.fullName }}</span>
+          <span class="text-gray-300">/</span>
+          <span class="text-gray-500">Select a file to view</span>
         </div>
       </div>
 
-      <!-- Comments Sidebar -->
-      <aside class="w-80 shrink-0 border-l border-gray-200 bg-white">
+      <!-- Empty State -->
+      <div class="flex-1 flex items-center justify-center">
+        <div class="text-gray-400 text-center">
+          <Icon name="i-lucide-file-text" class="w-16 h-16 mx-auto mb-4 opacity-50" />
+          <p>Select a file from the tree to view its contents</p>
+        </div>
+      </div>
+
+      <!-- Comments Sidebar (desktop) -->
+      <aside class="hidden md:block w-80 shrink-0 border-l border-gray-200 bg-white">
         <div class="p-4">
           <h3 class="text-xs font-semibold text-gray-500 uppercase mb-3">Comments</h3>
           <div class="text-gray-400 text-sm text-center py-8">
@@ -276,5 +274,54 @@ async function onBranchChange() {
         </div>
       </aside>
     </div>
+
+    <!-- Mobile Bottom Tabs -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex md:hidden z-40">
+      <button 
+        @click="mobileTab = mobileTab === 'files' ? null : 'files'"
+        class="flex-1 py-3 flex items-center justify-center gap-2 text-sm"
+        :class="mobileTab === 'files' ? 'text-red-600 bg-red-50' : 'text-gray-600'"
+      >
+        <Icon name="i-lucide-folder" class="w-5 h-5" />
+        Files
+      </button>
+      <button 
+        class="flex-1 py-3 flex items-center justify-center gap-2 text-sm text-gray-600"
+      >
+        <Icon name="i-lucide-message-square" class="w-5 h-5" />
+        Comments
+      </button>
+    </div>
+
+    <!-- Mobile Files Panel -->
+    <Teleport to="body">
+      <div 
+        v-if="mobileTab === 'files'"
+        class="fixed inset-0 z-50 md:hidden"
+      >
+        <!-- Backdrop -->
+        <div 
+          class="absolute inset-0 bg-black/50" 
+          @click="mobileTab = null"
+        />
+        <!-- Panel -->
+        <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[70vh] overflow-hidden flex flex-col">
+          <div class="flex items-center justify-between p-4 border-b">
+            <h3 class="font-semibold">Files</h3>
+            <button @click="mobileTab = null" class="p-1 text-gray-400 hover:text-gray-600">
+              <Icon name="i-lucide-x" class="w-5 h-5" />
+            </button>
+          </div>
+          <div class="overflow-y-auto flex-1">
+            <FileTree 
+              :projectId="projectId"
+              :sidebarOpen="true"
+              @selectFile="handleSelectFile; mobileTab = null"
+              @showFileMenu="showFileMenu"
+            />
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
