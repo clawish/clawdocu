@@ -344,6 +344,10 @@ watch(
 function openCommentBoxLocal() {
   showToolbar.value = false
   openCommentBox(selectedText.value, commentBoxTop.value)
+  // On mobile, open the comments panel to show the input
+  if (window.innerWidth < 768) {
+    mobileTab.value = 'comments'
+  }
 }
 
 watch(markdownMode, async () => {
