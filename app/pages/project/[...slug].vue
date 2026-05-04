@@ -125,7 +125,6 @@ function highlightSelection() {
   removeHighlight()
   
   const selection = window.getSelection()
-  // Use console.warn which is less likely to be stripped
   console.warn('[highlightSelection] selection:', selection)
   console.warn('[highlightSelection] selection.rangeCount:', selection?.rangeCount)
   
@@ -135,8 +134,6 @@ function highlightSelection() {
   }
   
   const range = selection.getRangeAt(0)
-  console.warn('[highlightSelection] range:', range)
-  console.warn('[highlightSelection] range.collapsed:', range.collapsed)
   console.warn('[highlightSelection] range text:', range.toString())
   
   if (range.collapsed) {
@@ -144,37 +141,36 @@ function highlightSelection() {
     return
   }
   
-  // Store the range for later removal
-  highlightRange.value = range.cloneRange()
+  // Find the element with data-line attribute
+  let node: Node | null = range.startContainer
+  let lineElement: Element | null = null
   
-  // Create a highlight span
-  const span = document.createElement('span')
-  span.className = 'bg-red-200 rounded'
-  span.style.backgroundColor = 'rgba(220, 38, 38, 0.3)'
-  highlightSpan.value = span
+  while (node && node !== markdownRef.value) {
+    if (node instanceof Element && node.hasAttribute('data-line')) {
+      lineElement = node
+      break
+    }
+    node = node.parentElement
+  }
   
-  console.warn('[highlightSelection] Created highlight span:', span)
-  console.warn('[highlightSelection] isMarkdown:', isMarkdown.value)
-  console.warn('[highlightSelection] markdownMode:', markdownMode.value)
-  console.warn('[highlightSelection] markdownRef:', markdownRef.value)
+  console.warn('[highlightSelection] Found line element:', lineElement)
   
-  try {
-    range.surroundContents(span)
-    console.warn('[highlightSelection] Successfully wrapped selection in highlight span')
-  } catch (e) {
-    // surroundContents fails if range spans multiple elements
-    console.warn('[highlightSelection] Could not highlight selection (spans multiple elements):', e)
+  if (lineElement) {
+    // Highlight the entire line
+    lineElement.classList.add('bg-red-100')
+    lineElement.style.backgroundColor = 'rgba(220, 38, 38, 0.15)'
+    highlightSpan.value = lineElement as unknown as HTMLElement
+    console.warn('[highlightSelection] Highlighted line element')
+  } else {
+    console.warn('[highlightSelection] No line element found')
   }
 }
 
 function removeHighlight() {
-  if (highlightSpan.value && highlightSpan.value.parentNode) {
-    // Restore the original text by unwrapping the span
-    const parent = highlightSpan.value.parentNode
-    while (highlightSpan.value.firstChild) {
-      parent.insertBefore(highlightSpan.value.firstChild, highlightSpan.value)
-    }
-    parent.removeChild(highlightSpan.value)
+  if (highlightSpan.value) {
+    // Remove the highlight class and style
+    highlightSpan.value.classList.remove('bg-red-100')
+    highlightSpan.value.style.backgroundColor = ''
     highlightSpan.value = null
   }
   highlightRange.value = null
