@@ -125,10 +125,23 @@ function highlightSelection() {
   removeHighlight()
   
   const selection = window.getSelection()
-  if (!selection || selection.rangeCount === 0) return
+  console.log('[highlightSelection] selection:', selection)
+  console.log('[highlightSelection] selection.rangeCount:', selection?.rangeCount)
+  
+  if (!selection || selection.rangeCount === 0) {
+    console.log('[highlightSelection] No selection or no ranges')
+    return
+  }
   
   const range = selection.getRangeAt(0)
-  if (range.collapsed) return
+  console.log('[highlightSelection] range:', range)
+  console.log('[highlightSelection] range.collapsed:', range.collapsed)
+  console.log('[highlightSelection] range text:', range.toString())
+  
+  if (range.collapsed) {
+    console.log('[highlightSelection] Range is collapsed (no selection)')
+    return
+  }
   
   // Store the range for later removal
   highlightRange.value = range.cloneRange()
@@ -139,12 +152,18 @@ function highlightSelection() {
   span.style.backgroundColor = 'rgba(220, 38, 38, 0.3)'
   highlightSpan.value = span
   
+  console.log('[highlightSelection] Created highlight span:', span)
+  console.log('[highlightSelection] isMarkdown:', isMarkdown.value)
+  console.log('[highlightSelection] markdownMode:', markdownMode.value)
+  console.log('[highlightSelection] markdownRef:', markdownRef.value)
+  
   try {
     range.surroundContents(span)
+    console.log('[highlightSelection] Successfully wrapped selection in highlight span')
   } catch (e) {
     // surroundContents fails if range spans multiple elements
     // In that case, we just rely on browser's native selection highlight
-    console.log('Could not highlight selection (spans multiple elements)')
+    console.log('[highlightSelection] Could not highlight selection (spans multiple elements):', e)
   }
 }
 
@@ -368,6 +387,10 @@ function handleSelectFile(item: { path: string; name: string; type: string }) {
 watch(
   () => textSelection.text.value,
   (text) => {
+    console.log('[textSelection watcher] text:', text)
+    console.log('[textSelection watcher] isMarkdown:', isMarkdown.value)
+    console.log('[textSelection watcher] markdownMode:', markdownMode.value)
+    
     if (text && text.length >= 2) {
       selectedText.value = text
       const rects = textSelection.rects.value
@@ -392,6 +415,7 @@ watch(
       
       // Highlight selected text in rendered markdown
       if (isMarkdown.value && markdownMode.value === 'render') {
+        console.log('[textSelection watcher] Calling highlightSelection()')
         highlightSelection()
       }
     } else {
