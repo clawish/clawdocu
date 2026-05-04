@@ -556,24 +556,25 @@ function showFileMenu(event: MouseEvent, item: any) {
           </div>
 
           <!-- Comments Column (desktop) -->
-          <CommentsSidebar
-            v-if="hasFile"
-            v-model:commentText="commentText"
-            :comments="comments"
-            :sortedComments="sortedComments"
-            :currentCommentIndex="currentCommentIndex"
-            :showCommentBox="showCommentBox"
-            :selectedText="selectedText"
-            :commentBoxTop="commentBoxTop"
-            :contentHeight="contentHeight"
-            :linesCount="lines.length"
-            :getCommentTop="getCommentTop"
-            @save="handleSaveComment"
-            @cancel="closeCommentBox"
-            @delete="handleDeleteComment"
-            @clickComment="handleClickComment"
-            class="hidden md:block"
-          />
+          <div class="hidden md:block">
+            <CommentsSidebar
+              v-if="hasFile"
+              v-model:commentText="commentText"
+              :comments="comments"
+              :sortedComments="sortedComments"
+              :currentCommentIndex="currentCommentIndex"
+              :showCommentBox="showCommentBox"
+              :selectedText="selectedText"
+              :commentBoxTop="commentBoxTop"
+              :contentHeight="contentHeight"
+              :linesCount="lines.length"
+              :getCommentTop="getCommentTop"
+              @save="handleSaveComment"
+              @cancel="closeCommentBox"
+              @delete="handleDeleteComment"
+              @clickComment="handleClickComment"
+            />
+          </div>
           
           <!-- Empty Comments Sidebar (no file) -->
           <aside v-else class="hidden md:block w-80 shrink-0 border-l border-gray-200 bg-white">

@@ -39,53 +39,54 @@ const handleSelectFile = (item: TreeItem) => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col">
+  <div class="h-full flex flex-col bg-white">
     <!-- Branch Selector -->
-    <div class="p-4 border-b">
-      <label class="text-xs font-semibold text-gray-500 uppercase mb-1 block">Branch</label>
+    <div class="px-4 py-3 border-b border-gray-100">
+      <label class="text-xs font-medium text-gray-500 mb-1 block">Branch</label>
       <select 
         v-model="selectedBranch" 
         @change="handleBranchChange"
-        class="w-full text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+        class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
       >
         <option v-for="branch in branches" :key="branch" :value="branch">{{ branch }}</option>
       </select>
     </div>
     
     <!-- File List -->
-    <div class="flex-1 overflow-y-auto p-4">
-      <h2 class="text-xs font-semibold text-gray-500 uppercase mb-2">Files</h2>
-    
-      <div v-if="loading" class="text-gray-400 text-sm p-2">Loading...</div>
-      <div v-else class="space-y-0.5">
-        <div
+    <div class="flex-1 overflow-y-auto">
+      <div v-if="loading" class="text-gray-400 text-sm p-4 text-center">Loading...</div>
+      <div v-else-if="flatTree.length === 0" class="text-gray-400 text-sm p-4 text-center">No files found</div>
+      <div v-else class="divide-y divide-gray-100">
+        <button
           v-for="item in flatTree"
           :key="item.path"
-          class="flex items-center gap-1"
-          :style="{ paddingLeft: (item.depth * 12 + 8) + 'px' }"
+          @click="handleSelectFile(item)"
+          class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+          :class="selectedFile?.path === item.path ? 'bg-red-50' : ''"
         >
-          <button
-            @click="handleSelectFile(item)"
-            class="flex-1 flex items-center gap-2 px-2 py-1 text-sm rounded hover:bg-gray-100 transition-colors"
-            :class="selectedFile?.path === item.path ? 'bg-red-50 text-red-600' : 'text-gray-700'"
+          <Icon 
+            :name="item.type === 'dir' 
+              ? (expandedPaths.has(item.path) ? 'i-lucide-folder-open' : 'i-lucide-folder')
+              : getFileIcon(item.name)" 
+            class="w-5 h-5 shrink-0"
+            :class="item.type === 'dir' ? 'text-amber-500' : 'text-gray-400'"
+          />
+          <span 
+            class="flex-1 text-left truncate"
+            :class="selectedFile?.path === item.path ? 'text-red-600 font-medium' : 'text-gray-700'"
+            :style="{ paddingLeft: item.depth * 16 + 'px' }"
           >
-            <Icon 
-              :name="item.type === 'dir' 
-                ? (expandedPaths.has(item.path) ? 'i-lucide-folder-open' : 'i-lucide-folder')
-                : getFileIcon(item.name)" 
-              class="w-4 h-4"
-            />
-            <span class="truncate">{{ item.name }}</span>
-          </button>
+            {{ item.name }}
+          </span>
           
           <!-- Comment count badge -->
           <span 
             v-if="(item.type === 'file' && commentCounts[item.path]) || (item.type === 'dir' && directoryCommentCounts[item.path])" 
-            class="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
+            class="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full min-w-[24px] text-center"
           >
             {{ item.type === 'file' ? commentCounts[item.path] : directoryCommentCounts[item.path] }}
           </span>
-        </div>
+        </button>
       </div>
     </div>
   </div>
