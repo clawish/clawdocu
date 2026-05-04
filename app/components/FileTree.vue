@@ -44,7 +44,7 @@ const handleSelectFile = (item: TreeItem) => {
 <template>
   <aside 
     v-if="sidebarOpen"
-    class="w-64 shrink-0 border-r border-gray-200 bg-white overflow-y-auto"
+    class="w-64 shrink-0 border-r border-gray-200 bg-white overflow-y-auto hidden md:block"
   >
     <div class="p-4">
       <!-- Branch Selector -->
@@ -104,11 +104,11 @@ const handleSelectFile = (item: TreeItem) => {
     </div>
   </aside>
 
-  <!-- Toggle sidebar button when closed -->
+  <!-- Toggle sidebar button when closed (desktop only) -->
   <button 
     v-if="!sidebarOpen"
     @click="emit('update:sidebarOpen', true)"
-    class="w-10 shrink-0 border-r border-gray-200 bg-white flex items-center justify-center hover:bg-gray-50"
+    class="w-10 shrink-0 border-r border-gray-200 bg-white flex items-center justify-center hover:bg-gray-50 hidden md:flex"
   >
     <Icon name="i-lucide-panel-left-open" class="w-5 h-5 text-gray-400" />
   </button>
