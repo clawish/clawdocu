@@ -629,12 +629,9 @@ function showFileMenu(event: MouseEvent, item: any) {
             </button>
           </div>
           <div class="overflow-y-auto flex-1">
-            <FileTree 
+            <MobileFileList 
               :projectId="projectId"
-              :sidebarOpen="true"
-              :forceShow="true"
               @selectFile="(item) => { handleSelectFile(item); mobileTab = null }"
-              @showFileMenu="showFileMenu"
             />
           </div>
         </div>
