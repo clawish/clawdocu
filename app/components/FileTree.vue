@@ -4,6 +4,7 @@ import type { TreeItem } from '~/composables/useFileTree'
 const props = defineProps<{
   projectId: string
   sidebarOpen: boolean
+  forceShow?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -44,7 +45,8 @@ const handleSelectFile = (item: TreeItem) => {
 <template>
   <aside 
     v-if="sidebarOpen"
-    class="w-64 shrink-0 border-r border-gray-200 bg-white overflow-y-auto hidden md:block"
+    class="w-64 shrink-0 border-r border-gray-200 bg-white overflow-y-auto"
+    :class="{ 'hidden md:block': !forceShow }"
   >
     <div class="p-4">
       <!-- Branch Selector -->

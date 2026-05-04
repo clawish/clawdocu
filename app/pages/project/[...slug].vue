@@ -632,6 +632,7 @@ function showFileMenu(event: MouseEvent, item: any) {
             <FileTree 
               :projectId="projectId"
               :sidebarOpen="true"
+              :forceShow="true"
               @selectFile="(item) => { handleSelectFile(item); mobileTab = null }"
               @showFileMenu="showFileMenu"
             />
