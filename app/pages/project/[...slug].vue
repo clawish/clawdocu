@@ -484,6 +484,24 @@ function showFileMenu(event: MouseEvent, item: any) {
             <span v-else class="text-gray-500">Select a file to view</span>
           </div>
           
+          <!-- Mobile View/Raw tabs -->
+          <div v-if="hasFile && isMarkdown" class="flex md:hidden items-center gap-1">
+            <button 
+              @click="markdownMode = 'render'"
+              class="px-2 py-1 text-xs rounded-lg transition-colors"
+              :class="markdownMode === 'render' ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-gray-100'"
+            >
+              View
+            </button>
+            <button 
+              @click="markdownMode = 'source'"
+              class="px-2 py-1 text-xs rounded-lg transition-colors"
+              :class="markdownMode === 'source' ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-gray-100'"
+            >
+              Raw
+            </button>
+          </div>
+          
           <div class="hidden md:flex items-center gap-3">
             <button 
               v-if="hasFile"
