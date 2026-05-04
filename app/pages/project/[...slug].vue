@@ -125,21 +125,22 @@ function highlightSelection() {
   removeHighlight()
   
   const selection = window.getSelection()
-  console.log('[highlightSelection] selection:', selection)
-  console.log('[highlightSelection] selection.rangeCount:', selection?.rangeCount)
+  // Use console.warn which is less likely to be stripped
+  console.warn('[highlightSelection] selection:', selection)
+  console.warn('[highlightSelection] selection.rangeCount:', selection?.rangeCount)
   
   if (!selection || selection.rangeCount === 0) {
-    console.log('[highlightSelection] No selection or no ranges')
+    console.warn('[highlightSelection] No selection or no ranges')
     return
   }
   
   const range = selection.getRangeAt(0)
-  console.log('[highlightSelection] range:', range)
-  console.log('[highlightSelection] range.collapsed:', range.collapsed)
-  console.log('[highlightSelection] range text:', range.toString())
+  console.warn('[highlightSelection] range:', range)
+  console.warn('[highlightSelection] range.collapsed:', range.collapsed)
+  console.warn('[highlightSelection] range text:', range.toString())
   
   if (range.collapsed) {
-    console.log('[highlightSelection] Range is collapsed (no selection)')
+    console.warn('[highlightSelection] Range is collapsed (no selection)')
     return
   }
   
@@ -152,18 +153,17 @@ function highlightSelection() {
   span.style.backgroundColor = 'rgba(220, 38, 38, 0.3)'
   highlightSpan.value = span
   
-  console.log('[highlightSelection] Created highlight span:', span)
-  console.log('[highlightSelection] isMarkdown:', isMarkdown.value)
-  console.log('[highlightSelection] markdownMode:', markdownMode.value)
-  console.log('[highlightSelection] markdownRef:', markdownRef.value)
+  console.warn('[highlightSelection] Created highlight span:', span)
+  console.warn('[highlightSelection] isMarkdown:', isMarkdown.value)
+  console.warn('[highlightSelection] markdownMode:', markdownMode.value)
+  console.warn('[highlightSelection] markdownRef:', markdownRef.value)
   
   try {
     range.surroundContents(span)
-    console.log('[highlightSelection] Successfully wrapped selection in highlight span')
+    console.warn('[highlightSelection] Successfully wrapped selection in highlight span')
   } catch (e) {
     // surroundContents fails if range spans multiple elements
-    // In that case, we just rely on browser's native selection highlight
-    console.log('[highlightSelection] Could not highlight selection (spans multiple elements):', e)
+    console.warn('[highlightSelection] Could not highlight selection (spans multiple elements):', e)
   }
 }
 
@@ -387,9 +387,9 @@ function handleSelectFile(item: { path: string; name: string; type: string }) {
 watch(
   () => textSelection.text.value,
   (text) => {
-    console.log('[textSelection watcher] text:', text)
-    console.log('[textSelection watcher] isMarkdown:', isMarkdown.value)
-    console.log('[textSelection watcher] markdownMode:', markdownMode.value)
+    console.warn('[textSelection watcher] text:', text)
+    console.warn('[textSelection watcher] isMarkdown:', isMarkdown.value)
+    console.warn('[textSelection watcher] markdownMode:', markdownMode.value)
     
     if (text && text.length >= 2) {
       selectedText.value = text
@@ -415,7 +415,7 @@ watch(
       
       // Highlight selected text in rendered markdown
       if (isMarkdown.value && markdownMode.value === 'render') {
-        console.log('[textSelection watcher] Calling highlightSelection()')
+        console.warn('[textSelection watcher] Calling highlightSelection()')
         highlightSelection()
       }
     } else {
