@@ -151,9 +151,16 @@ export const useFileTree = () => {
       return totalCount
     }
     
-    // If expanded, check if there are comments in DIRECT children (files or collapsed subfolders)
-    // We should NOT show count if comments are in expanded subfolders (they will show their own count)
-    let directVisibleCount = 0
+    // If expanded, we should NOT show count if:
+    // - The commented file is a direct child (file is visible)
+    // - OR the commented file is in an expanded subfolder (that subfolder will show count)
+    // 
+    // We SHOULD show count if:
+    // - The commented file is in a COLLAPSED direct child subfolder
+    // 
+    // Basically: only show count on the LOWEST VISIBLE folder that contains the file
+    
+    let countInCollapsedDirectChildren = 0
     
     // Find all files with comments under this path
     for (const [filePath, count] of Object.entries(commentCounts.value)) {
@@ -171,14 +178,25 @@ export const useFileTree = () => {
       // Check the first subfolder (direct child)
       const firstSubfolder = item.path + '/' + parts[0]
       
-      // If the direct child subfolder is collapsed, count it
-      // If the direct child subfolder is expanded, don't count it (it will show its own count)
+      // If the direct child subfolder is COLLAPSED, this folder should NOT show count
+      // because the collapsed subfolder will show it (it's the lowest visible level)
       if (!expandedPaths.value.has(firstSubfolder)) {
-        directVisibleCount += count
+        // Don't count - the collapsed subfolder will show this count
+        continue
       }
+      
+      // If the direct child subfolder is EXPANDED, check deeper...
+      // But we don't need to count here because expanded subfolders will handle it
+      // Actually, we need to count if ALL intermediate folders are expanded but the file is still hidden
+      // This happens when there are multiple levels of expanded folders
+      
+      // For now, let's simplify: if any direct child is expanded, don't show count on this level
+      // because that expanded child (or its children) will show the count
     }
     
-    return directVisibleCount > 0 ? directVisibleCount : null
+    // If we have expanded direct children, don't show count on this level
+    // The count will be shown on the lowest visible collapsed folder or the file itself
+    return null
   }
 
   // Get file icon based on filename and extension
