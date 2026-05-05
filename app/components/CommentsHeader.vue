@@ -14,9 +14,15 @@ const emit = defineEmits<{
 
 <template>
   <div class="w-80 shrink-0 grow-0 overflow-hidden border-l border-gray-200 bg-white px-4 py-3 flex items-center justify-between">
-    <h3 class="text-xs font-semibold text-gray-500 uppercase">
-      Comments <span v-if="comments.length" class="text-gray-400">({{ comments.length }})</span>
-    </h3>
+    <div class="flex items-center gap-2">
+      <h3 class="text-xs font-semibold text-gray-500 uppercase">Comments</h3>
+      <span 
+        v-if="comments.length" 
+        class="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
+      >
+        {{ comments.length }}
+      </span>
+    </div>
     <div class="flex items-center gap-1">
       <button 
         @click="emit('navigate', -1)"
