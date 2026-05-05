@@ -263,9 +263,27 @@ function getPositionByLineNumber(lineNumber: number): number {
   return (lineNumber - 1) * 24 + 24
 }
 
-const getCommentTop = (comment: any): number => {
+// Pre-calculated comment positions to prevent overlap
+const commentPositions = computed(() => {
   void commentPositionsVersion.value
-  return getPositionByLineNumber(comment.lineNumber || 1)
+  
+  const positions: Record<string, number> = {}
+  const commentHeight = 120 // Approximate height of a comment card
+  let lastBottom = 0
+  
+  for (const comment of sortedComments.value) {
+    const baseTop = getPositionByLineNumber(comment.lineNumber || 1)
+    // Ensure this comment starts below the previous one
+    const adjustedTop = Math.max(baseTop, lastBottom)
+    positions[comment.id] = adjustedTop
+    lastBottom = adjustedTop + commentHeight
+  }
+  
+  return positions
+})
+
+const getCommentTop = (comment: any): number => {
+  return commentPositions.value[comment.id] || getPositionByLineNumber(comment.lineNumber || 1)
 }
 
 // Load project and file
