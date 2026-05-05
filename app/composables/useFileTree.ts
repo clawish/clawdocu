@@ -147,6 +147,7 @@ export const useFileTree = () => {
     
     // If collapsed, show total count
     if (!expandedPaths.value.has(item.path)) {
+      console.warn('[getVisibleCommentCount] Collapsed folder:', item.path, 'count:', totalCount)
       return totalCount
     }
     
@@ -154,34 +155,40 @@ export const useFileTree = () => {
     // (comments in files inside unexpanded subdirectories)
     let hiddenCount = 0
     
-    const countHiddenComments = (dirPath: string) => {
-      // Find all files with comments under this path
-      for (const [filePath, count] of Object.entries(commentCounts.value)) {
-        if (!count) continue
-        if (filePath.startsWith(dirPath + '/')) {
-          // Check if any parent directory between dirPath and filePath is collapsed
-          const relativePath = filePath.slice(dirPath.length + 1)
-          const parts = relativePath.split('/')
-          
-          let hasCollapsedParent = false
-          let currentPath = dirPath
-          
-          for (let i = 0; i < parts.length - 1; i++) {
-            currentPath = currentPath + '/' + parts[i]
-            if (!expandedPaths.value.has(currentPath)) {
-              hasCollapsedParent = true
-              break
-            }
-          }
-          
-          if (hasCollapsedParent) {
-            hiddenCount += count
-          }
+    // Find all files with comments under this path
+    for (const [filePath, count] of Object.entries(commentCounts.value)) {
+      if (!count) continue
+      if (!filePath.startsWith(item.path + '/')) continue
+      
+      // Check if any parent directory between item.path and filePath is collapsed
+      const relativePath = filePath.slice(item.path.length + 1)
+      const parts = relativePath.split('/')
+      
+      // If it's a direct child file, it's visible (no hidden count)
+      if (parts.length === 1) {
+        console.warn('[getVisibleCommentCount] Direct child file visible:', filePath)
+        continue
+      }
+      
+      // Check intermediate directories
+      let hasCollapsedParent = false
+      let currentPath = item.path
+      
+      for (let i = 0; i < parts.length - 1; i++) {
+        currentPath = currentPath + '/' + parts[i]
+        if (!expandedPaths.value.has(currentPath)) {
+          hasCollapsedParent = true
+          console.warn('[getVisibleCommentCount] Found collapsed parent:', currentPath, 'for file:', filePath)
+          break
         }
+      }
+      
+      if (hasCollapsedParent) {
+        hiddenCount += count
       }
     }
     
-    countHiddenComments(item.path)
+    console.warn('[getVisibleCommentCount] Expanded folder:', item.path, 'hiddenCount:', hiddenCount)
     return hiddenCount > 0 ? hiddenCount : null
   }
 
