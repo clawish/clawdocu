@@ -594,14 +594,15 @@ function showFileMenu(event: MouseEvent, item: any) {
           </div>
         </div>
 
-        <CommentsHeader
-          v-if="hasFile"
-          :comments="comments"
-          :sortedComments="sortedComments"
-          :currentCommentIndex="currentCommentIndex"
-          @navigate="navigateComment"
-          class="hidden md:block"
-        />
+        <div class="hidden md:block">
+          <CommentsHeader
+            v-if="hasFile"
+            :comments="comments"
+            :sortedComments="sortedComments"
+            :currentCommentIndex="currentCommentIndex"
+            @navigate="navigateComment"
+          />
+        </div>
       </div>
 
       <!-- Scrollable Content + Comments Container -->
