@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
   const owner = proj.fullName.split('/')[0]
   const repo = proj.fullName.split('/')[1]
   
-  // Get tree to find all .clawdocu files
+  // Get tree to find all .clawdocu-comments files
   const treeRes = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`,
     {
@@ -37,9 +37,9 @@ export default defineEventHandler(async (event) => {
   
   const treeData = await treeRes.json()
   
-  // Find all .clawdocu/*.json files
+  // Find all .clawdocu-comments/*.json files
   const commentFiles = treeData.tree.filter(item => 
-    item.path.startsWith('.clawdocu/') && item.path.endsWith('.json')
+    item.path.startsWith('.clawdocu-comments/') && item.path.endsWith('.json')
   )
   
   // Fetch each comment file and count comments
@@ -62,8 +62,8 @@ export default defineEventHandler(async (event) => {
         const content = Buffer.from(data.content, 'base64').toString('utf-8')
         const parsed = JSON.parse(content)
         
-        // Extract original file path from .clawdocu/path/to/file.json
-        const originalPath = file.path.replace('.clawdocu/', '').replace('.json', '')
+        // Extract original file path from .clawdocu-comments/path/to/file.json
+        const originalPath = file.path.replace('.clawdocu-comments/', '').replace('.json', '')
         counts[originalPath] = (parsed.comments || []).length
       }
     } catch (e) {

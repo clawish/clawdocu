@@ -38,14 +38,14 @@ export default defineEventHandler(async (event) => {
     description: repo.description,
   })
 
-  // Seed .clawdocu/README.md into the repo if it doesn't exist
+  // Seed .clawdocu-comments/README.md into the repo if it doesn't exist
   const owner = fullName.split('/')[0]
   const repoName = fullName.split('/')[1]
   
   try {
-    // Check if .clawdocu/README.md already exists
+    // Check if .clawdocu-comments/README.md already exists
     const checkRes = await fetch(
-      `https://api.github.com/repos/${owner}/${repoName}/contents/.clawdocu/README.md`,
+      `https://api.github.com/repos/${owner}/${repoName}/contents/.clawdocu-comments/README.md`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -56,12 +56,12 @@ export default defineEventHandler(async (event) => {
     
     if (!checkRes.ok) {
       // File doesn't exist — create it
-      const readmePath = resolve(process.cwd(), '.clawdocu/README.md')
+      const readmePath = resolve(process.cwd(), '.clawdocu-comments/README.md')
       const readmeContent = readFileSync(readmePath, 'utf-8')
       const encodedContent = Buffer.from(readmeContent).toString('base64')
       
       await fetch(
-        `https://api.github.com/repos/${owner}/${repoName}/contents/.clawdocu/README.md`,
+        `https://api.github.com/repos/${owner}/${repoName}/contents/.clawdocu-comments/README.md`,
         {
           method: 'PUT',
           headers: {
@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            message: 'Initialize .clawdocu with AI agent guide',
+            message: 'Initialize .clawdocu-comments with AI agent guide',
             content: encodedContent
           })
         }
@@ -78,7 +78,7 @@ export default defineEventHandler(async (event) => {
     }
   } catch (e) {
     // Non-critical — don't fail project creation if seeding fails
-    console.error('Failed to seed .clawdocu/README.md:', e)
+    console.error('Failed to seed .clawdocu-comments/README.md:', e)
   }
   
   return { success: true }

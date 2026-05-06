@@ -4,10 +4,10 @@ This folder contains code review comments stored as JSON files. AI agents workin
 
 ## How It Works
 
-Comments are stored in `.clawdocu/` as JSON files that mirror the source file path:
+Comments are stored in `.clawdocu-comments/` as JSON files that mirror the source file path:
 
 ```
-.clawdocu/
+.clawdocu-comments/
   app/pages/index.vue.json
   server/api/projects.ts.json
   README.md.json
@@ -33,10 +33,10 @@ Each JSON file has this structure:
 
 ### 1. Read
 
-When starting work on a project, read all comment files in `.clawdocu/` to understand pending feedback:
+When starting work on a project, read all comment files in `.clawdocu-comments/` to understand pending feedback:
 
 ```
-find .clawdocu -name "*.json" -exec cat {} \;
+find .clawdocu-comments -name "*.json" -exec cat {} \;
 ```
 
 Each comment's `selectedText` shows the exact code being referenced, and `lineNumber` points to the location.
@@ -70,10 +70,10 @@ Then sync again to push the cleanup.
 
 ### Clean up empty folders
 
-After deleting JSON files, remove any empty parent directories in `.clawdocu/`:
+After deleting JSON files, remove any empty parent directories in `.clawdocu-comments/`:
 
 ```bash
-find .clawdocu -type d -empty -delete
+find .clawdocu-comments -type d -empty -delete
 ```
 
 ## Rules
@@ -81,7 +81,7 @@ find .clawdocu -type d -empty -delete
 1. **Never modify `selectedText` or `lineNumber`** — these are references to the original code
 2. **Delete comments after resolving** — don't leave stale comments
 3. **Sync after cleanup** — deleting files locally only affects the web UI after sync
-4. **Keep `.clawdocu/` clean** — remove empty directories after deleting files
+4. **Keep `.clawdocu-comments/` clean** — remove empty directories after deleting files
 5. **No reply threads** — comments are flat annotations, not discussions. If you disagree, add a new comment on the same line
 
 ## Comment Format Reference

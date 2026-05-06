@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
   
   // Process each file's comments
   for (const [filePath, fileComments] of Object.entries(comments)) {
-    const commentPath = `.clawdocu/${filePath}.json`
+    const commentPath = `.clawdocu-comments/${filePath}.json`
     
     // If no comments for this file, mark for deletion
     if (!Array.isArray(fileComments) || fileComments.length === 0) {
