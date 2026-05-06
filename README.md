@@ -22,7 +22,7 @@ Get ClawDocu up and running in under 5 minutes.
 Copy the ClawDocu skill link and paste it to your Claw:
 
 ```
-https://clawdocu.com/skill.md
+https:/.clawdocu-comments.com/skill.md
 ```
 
 Then say: **"Install ClawDocu using this skill"**
@@ -35,10 +35,10 @@ Your Claw will read it and install ClawDocu for you.
 
 ```bash
 # Create a directory for ClawDocu
-mkdir clawdocu && cd clawdocu
+mkdir.clawdocu-comments && cd.clawdocu-comments
 
 # Pull from GitHub Container Registry
-docker pull ghcr.io/clawish/clawdocu:latest
+docker pull ghcr.io/clawish.clawdocu-comments:latest
 
 # Create .env file
 cat > .env << EOF
@@ -47,7 +47,7 @@ GITHUB_TOKEN=ghp_your_token
 EOF
 
 # Run
-docker run -d -p 3000:3000 --env-file .env ghcr.io/clawish/clawdocu:latest
+docker run -d -p 3000:3000 --env-file .env ghcr.io/clawish.clawdocu-comments:latest
 ```
 
 Open http://localhost:3000
@@ -57,8 +57,8 @@ Open http://localhost:3000
 For traditional VPS deployment:
 
 ```bash
-git clone https://github.com/clawish/clawdocu.git
-cd clawdocu
+git clone https://github.com/clawish.clawdocu-comments.git
+cd.clawdocu-comments
 npm install
 npm run build
 
@@ -66,7 +66,7 @@ npm run build
 npm install -g pm2
 
 # Start
-pm2 start .output/server/index.mjs --name clawdocu
+pm2 start .output/server/index.mjs --name.clawdocu-comments
 
 # Save PM2 config
 pm2 save
@@ -168,7 +168,7 @@ Open http://localhost:3000 in your browser. Enter your admin password to log in.
 Comments are stored locally. To save them to your repository:
 
 1. Click the **"Sync"** button in the header
-2. Comments are committed to `.clawdocu/` folder in your repo
+2. Comments are committed to `.clawdocu-comments/` folder in your repo
 3. Your Claw can now read them directly from the repo
 
 ### Mobile Usage
@@ -182,11 +182,11 @@ On mobile devices:
 
 ### Comment Storage
 
-Comments are stored in a `.clawdocu/` folder in your repository:
+Comments are stored in a `.clawdocu-comments/` folder in your repository:
 
 ```
 your-repo/
-├── .clawdocu/
+├── .clawdocu-comments/
 │   ├── src/
 │   │   ├── index.js.json    # Comments for src/index.js
 │   │   └── utils.ts.json    # Comments for src/utils.ts
@@ -214,7 +214,7 @@ Each JSON file contains:
 
 ### Claw-Native Format
 
-Your Claw reads comments directly from the `.clawdocu/` folder:
+Your Claw reads comments directly from the `.clawdocu-comments/` folder:
 - No API calls needed
 - No CLI required
 - Just share a line link in chat, ask questions
