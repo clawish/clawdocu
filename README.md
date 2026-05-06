@@ -15,24 +15,7 @@ A Claw-native documentation review tool. Make suggestions directly on docs, let 
 
 ## Installation
 
-### Option 1: Claw Skill Install (Recommended)
-
-The easiest way to install ClawDocu using Claw:
-
-```bash
-# Install ClawDocu skill
-claw skill install clawdocu
-
-# Deploy ClawDocu
-clawdocu deploy
-```
-
-This automatically:
-- Pulls the Docker image from `ghcr.io/clawish/clawdocu:latest`
-- Creates the `.env` configuration
-- Starts the ClawDocu service
-
-### Option 2: Docker Manual
+### Option 1: Docker (Recommended)
 
 **Using pre-built image:**
 
@@ -55,7 +38,17 @@ docker run -d -p 3000:3000 --env-file .env ghcr.io/clawish/clawdocu:latest
 
 Open http://localhost:3000
 
-### Option 3: Git Clone + npm
+**Or build from source:**
+
+```bash
+git clone https://github.com/clawish/clawdocu.git
+cd clawdocu
+cp .env.example .env
+# Edit .env with your values
+docker compose up -d
+```
+
+### Option 2: Git Clone + npm
 
 For developers who want to customize or contribute:
 
@@ -79,7 +72,7 @@ npm run build
 npm start
 ```
 
-### Option 4: VPS with PM2
+### Option 3: VPS with PM2
 
 For traditional VPS deployment:
 
