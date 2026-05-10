@@ -18,6 +18,18 @@ const router = useRouter()
 const { authChecked, showPasswordInput, password, authError, checkAuth, handleLogin } = useAuth()
 const project = ref(null)
 
+// Set page title based on project and file
+useHead(() => ({
+  title: computed(() => {
+    const projectName = project.value?.name || 'ClawDocu'
+    const fileName = selectedFile.value?.name || ''
+    if (fileName) {
+      return `${projectName}/${fileName}`
+    }
+    return projectName
+  })
+}))
+
 // Parse slug: first segment is projectId, rest is filePath
 const slug = computed(() => {
   const s = route.params.slug
