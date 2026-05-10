@@ -25,9 +25,10 @@ export default defineEventHandler(async (event) => {
   
   const repos = await res.json()
   
-  // Filter to private repos or repos with write access
+  // Filter to private repos or repos with write access, exclude ClawDocu repo itself
   const accessibleRepos = repos
     .filter((repo: any) => repo.private || repo.permissions?.push)
+    .filter((repo: any) => repo.full_name.toLowerCase() !== 'clawish/clawdocu')
     .map((repo: any) => ({
       name: repo.name,
       fullName: repo.full_name,

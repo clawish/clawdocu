@@ -62,6 +62,14 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { fullName } = body
   
+  // Block adding ClawDocu repo itself to avoid self-referential comments
+  if (fullName.toLowerCase() === 'clawish/clawdocu') {
+    throw createError({
+      statusCode: 400,
+      message: 'Cannot add ClawDocu repository itself as a project'
+    })
+  }
+  
   // Get repo info from GitHub
   const config = useRuntimeConfig()
   const token = config.githubToken || process.env.GITHUB_TOKEN
