@@ -1,0 +1,340 @@
+// File tree state management composable
+import type { Ref } from 'vue'
+import {
+  useTreeDataState,
+  useExpandedPathsState,
+  useSelectedFileState,
+  useBranchesState,
+  useSelectedBranchState,
+  useCommentCountsState,
+  useTreeLoadingState
+} from './useData'
+
+export interface TreeItem {
+  name: string
+  path: string
+  type: 'file' | 'dir'
+  depth: number
+}
+
+export const useFileTree = () => {
+  // Get state from useData.ts
+  const treeData = useTreeDataState()
+  const expandedPaths = useExpandedPathsState()
+  const selectedFile = useSelectedFileState()
+  const branches = useBranchesState()
+  const selectedBranch = useSelectedBranchState()
+  const commentCounts = useCommentCountsState()
+  const loading = useTreeLoadingState()
+  // Sync branch from URL query parameter
+  const syncBranchFromUrl = () => {
+    if (import.meta.client) {
+      const route = useRoute()
+      const branchFromQuery = route.query.branch as string
+      if (branchFromQuery && branchFromQuery !== selectedBranch.value) {
+        selectedBranch.value = branchFromQuery
+      }
+    }
+  }
+  
+  // Get current branch (from state or URL)
+  const getCurrentBranch = (): string => {
+    if (selectedBranch.value) return selectedBranch.value
+    if (import.meta.client) {
+      const route = useRoute()
+      return (route.query.branch as string) || 'main'
+    }
+    return 'main'
+  }
+  // Load file tree from GitHub
+  const loadTree = async (projectId: string, branch?: string) => {
+    // Sync branch from URL if not explicitly provided
+    if (!branch) {
+      syncBranchFromUrl()
+      branch = selectedBranch.value || getCurrentBranch()
+    }
+    
+    // Only show loading state on initial load, not on refreshes
+    if (treeData.value.length === 0) {
+      loading.value = true
+    }
+    try {
+      const query: Record<string, string> = {}
+      if (branch) {
+        query.branch = branch
+      }
+      
+      const response = await $fetch(`/api/projects/${projectId}/tree`, {
+        query
+      })
+      treeData.value = response.tree || []
+      branches.value = response.branches || ['main']
+      
+      // Set selectedBranch if not already set
+      if (!selectedBranch.value) {
+        if (response.defaultBranch) {
+          selectedBranch.value = response.defaultBranch
+        } else if (branch) {
+          selectedBranch.value = branch
+        } else {
+          selectedBranch.value = 'main'
+        }
+      }
+      
+      // Load comment counts
+      await loadCommentCounts(projectId)
+    } catch (e) {
+      console.error('Failed to load tree:', e)
+      treeData.value = []
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // Load comment counts for all files
+  const loadCommentCounts = async (projectId: string) => {
+    try {
+      const response = await $fetch(`/api/projects/${projectId}/comment-counts`)
+      commentCounts.value = response.counts || {}
+    } catch (e) {
+      console.error('Failed to load comment counts:', e)
+    }
+  }
+
+  // Toggle folder expansion
+  const toggleFolder = (path: string) => {
+    if (expandedPaths.value.has(path)) {
+      expandedPaths.value.delete(path)
+    } else {
+      expandedPaths.value.add(path)
+    }
+    // Trigger reactivity
+    expandedPaths.value = new Set(expandedPaths.value)
+  }
+
+  // Select a file
+  const selectFile = (item: TreeItem) => {
+    if (item.type === 'file') {
+      selectedFile.value = { path: item.path, name: item.name, type: 'file' }
+    }
+  }
+
+  // Change branch
+  const changeBranch = async (projectId: string, branch: string) => {
+    console.log('[changeBranch] Called:', { projectId, branch, currentBranch: selectedBranch.value })
+    selectedBranch.value = branch
+    await loadTree(projectId, branch)
+  }
+
+  // Flatten tree for rendering
+  const flatTree = computed(() => {
+    const result: TreeItem[] = []
+    
+    function flatten(items: any[], depth = 0) {
+      for (const item of items) {
+        result.push({
+          name: item.name,
+          path: item.path,
+          type: item.type,
+          depth
+        })
+        
+        if (item.type === 'dir' && expandedPaths.value.has(item.path) && item.children) {
+          flatten(item.children, depth + 1)
+        }
+      }
+    }
+    
+    flatten(treeData.value)
+    return result
+  })
+
+  // Aggregate comment counts for directories (sum of all nested files)
+  const directoryCommentCounts = computed(() => {
+    const counts: Record<string, number> = {}
+    for (const [filePath, count] of Object.entries(commentCounts.value)) {
+      if (!count) continue
+      const parts = filePath.split('/')
+      // Aggregate into each parent directory
+      for (let i = 1; i < parts.length; i++) {
+        const dirPath = parts.slice(0, i).join('/')
+        counts[dirPath] = (counts[dirPath] || 0) + count
+      }
+    }
+    return counts
+  })
+
+  // Calculate visible comment count for a directory
+  // Returns the count only if the directory is collapsed or has hidden nested comments
+  // The count should only show on the LOWEST visible level that contains the commented file
+  const getVisibleCommentCount = (item: TreeItem): number | null => {
+    if (item.type === 'file') {
+      return commentCounts.value[item.path] || null
+    }
+    
+    // For directories
+    const totalCount = directoryCommentCounts.value[item.path]
+    if (!totalCount) return null
+    
+    // If collapsed, show total count (this is the lowest visible level)
+    if (!expandedPaths.value.has(item.path)) {
+      return totalCount
+    }
+    
+    // If expanded, we should NOT show count if:
+    // - The commented file is a direct child (file is visible)
+    // - OR the commented file is in an expanded subfolder (that subfolder will show count)
+    // 
+    // We SHOULD show count if:
+    // - The commented file is in a COLLAPSED direct child subfolder
+    // 
+    // Basically: only show count on the LOWEST VISIBLE folder that contains the file
+    
+    let countInCollapsedDirectChildren = 0
+    
+    // Find all files with comments under this path
+    for (const [filePath, count] of Object.entries(commentCounts.value)) {
+      if (!count) continue
+      if (!filePath.startsWith(item.path + '/')) continue
+      
+      const relativePath = filePath.slice(item.path.length + 1)
+      const parts = relativePath.split('/')
+      
+      // If it's a direct child file (depth 1), it's visible - don't count
+      if (parts.length === 1) {
+        continue
+      }
+      
+      // Check the first subfolder (direct child)
+      const firstSubfolder = item.path + '/' + parts[0]
+      
+      // If the direct child subfolder is COLLAPSED, this folder should NOT show count
+      // because the collapsed subfolder will show it (it's the lowest visible level)
+      if (!expandedPaths.value.has(firstSubfolder)) {
+        // Don't count - the collapsed subfolder will show this count
+        continue
+      }
+      
+      // If the direct child subfolder is EXPANDED, check deeper...
+      // But we don't need to count here because expanded subfolders will handle it
+      // Actually, we need to count if ALL intermediate folders are expanded but the file is still hidden
+      // This happens when there are multiple levels of expanded folders
+      
+      // For now, let's simplify: if any direct child is expanded, don't show count on this level
+      // because that expanded child (or its children) will show the count
+    }
+    
+    // If we have expanded direct children, don't show count on this level
+    // The count will be shown on the lowest visible collapsed folder or the file itself
+    return null
+  }
+
+  // Get file icon based on filename and extension
+  const getFileIcon = (filename: string): string => {
+    const lower = filename.toLowerCase()
+
+    // Match full filename first (for dotfiles and special files without extensions)
+    const filenameIcons: Record<string, string> = {
+      'dockerfile': 'i-lucide-box',
+      'makefile': 'i-lucide-file-cog',
+      'readme': 'i-lucide-file-text',
+      'license': 'i-lucide-file-text',
+      'changelog': 'i-lucide-file-text',
+      '.gitignore': 'i-lucide-git-branch',
+      '.dockerignore': 'i-lucide-box',
+      '.env': 'i-lucide-lock',
+      '.env.local': 'i-lucide-lock',
+      '.env.development': 'i-lucide-lock',
+      '.env.production': 'i-lucide-lock',
+      '.env.test': 'i-lucide-lock',
+      '.eslintrc': 'i-lucide-file-cog',
+      '.prettierrc': 'i-lucide-file-cog',
+      '.babelrc': 'i-lucide-file-cog',
+      '.npmrc': 'i-lucide-file-cog',
+      '.editorconfig': 'i-lucide-file-cog',
+      '.github': 'i-lucide-git-branch',
+    }
+    if (filenameIcons[lower]) return filenameIcons[lower]
+
+    // Match by extension (after the last dot)
+    const ext = lower.split('.').pop() || ''
+    const extIcons: Record<string, string> = {
+      'ts': 'i-lucide-file-type',
+      'tsx': 'i-lucide-file-type',
+      'js': 'i-lucide-file-type',
+      'jsx': 'i-lucide-file-type',
+      'mjs': 'i-lucide-file-type',
+      'cjs': 'i-lucide-file-type',
+      'vue': 'i-lucide-file-code',
+      'svelte': 'i-lucide-file-code',
+      'json': 'i-lucide-file-json',
+      'md': 'i-lucide-file-text',
+      'markdown': 'i-lucide-file-text',
+      'css': 'i-lucide-file-code',
+      'scss': 'i-lucide-file-code',
+      'less': 'i-lucide-file-code',
+      'html': 'i-lucide-file-code',
+      'xml': 'i-lucide-file-code',
+      'py': 'i-lucide-file-type',
+      'go': 'i-lucide-file-type',
+      'rs': 'i-lucide-file-type',
+      'java': 'i-lucide-file-type',
+      'kt': 'i-lucide-file-type',
+      'swift': 'i-lucide-file-type',
+      'c': 'i-lucide-file-type',
+      'cpp': 'i-lucide-file-type',
+      'h': 'i-lucide-file-type',
+      'rb': 'i-lucide-file-type',
+      'php': 'i-lucide-file-type',
+      'sql': 'i-lucide-database',
+      'yaml': 'i-lucide-file-cog',
+      'yml': 'i-lucide-file-cog',
+      'toml': 'i-lucide-file-cog',
+      'ini': 'i-lucide-file-cog',
+      'cfg': 'i-lucide-file-cog',
+      'conf': 'i-lucide-file-cog',
+      'sh': 'i-lucide-file-code',
+      'bash': 'i-lucide-file-code',
+      'zsh': 'i-lucide-file-code',
+      'bat': 'i-lucide-file-code',
+      'ps1': 'i-lucide-file-code',
+      'lock': 'i-lucide-lock',
+      'png': 'i-lucide-image',
+      'jpg': 'i-lucide-image',
+      'jpeg': 'i-lucide-image',
+      'gif': 'i-lucide-image',
+      'svg': 'i-lucide-image',
+      'ico': 'i-lucide-image',
+      'webp': 'i-lucide-image',
+      'woff': 'i-lucide-file-type',
+      'woff2': 'i-lucide-file-type',
+      'ttf': 'i-lucide-file-type',
+      'eot': 'i-lucide-file-type',
+    }
+    return extIcons[ext] || 'i-lucide-file'
+  }
+
+  return {
+    // State (from useState - already reactive refs)
+    treeData: readonly(treeData),
+    expandedPaths,
+    selectedFile,
+    loading: readonly(loading),
+    branches: readonly(branches),
+    selectedBranch,
+    commentCounts: readonly(commentCounts),
+    directoryCommentCounts,
+    flatTree,
+
+    // Methods
+    loadTree,
+    loadCommentCounts,
+    toggleFolder,
+    selectFile,
+    changeBranch,
+    getFileIcon,
+    getVisibleCommentCount,
+    syncBranchFromUrl,
+    getCurrentBranch,
+  }
+}
