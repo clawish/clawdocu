@@ -1,0 +1,17 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- File-text icon (document) with white background -->
+  <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" fill="white" />
+  <!-- Folded corner (top-right) with white fill -->
+  <path d="M14 2v5a1 1 0 0 0 1 1h5" fill="white" />
+  <path d="M10 9H8" />
+  <path d="M16 13H8" />
+  <path d="M16 17H8" />
+  <!-- Message-square icon (white fill, bottom-right) -->
+  <g transform="translate(10, 10) scale(0.6)">
+    <path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" fill="white" stroke="#ef4444" stroke-width="3.5"/>
+    <!-- Dots in middle -->
+    <circle cx="8" cy="11" r="1" fill="#ef4444" stroke="none"/>
+    <circle cx="12" cy="11" r="1" fill="#ef4444" stroke="none"/>
+    <circle cx="16" cy="11" r="1" fill="#ef4444" stroke="none"/>
+  </g>
+</svg>

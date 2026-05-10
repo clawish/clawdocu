@@ -1,0 +1,41 @@
+name: Sync with Upstream
+
+on:
+  schedule:
+    # Run daily at 0:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    if: github.repository != 'clawish/clawdocu' # Don't run on original repo
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/clawish/clawdocu.git
+          git fetch upstream
+
+      - name: Sync with upstream
+        run: |
+          git checkout main
+          git merge upstream/main --no-edit
+          git push origin main
+
+      - name: Sync tags
+        run: |
+          git fetch upstream --tags
+          git push origin --tags
