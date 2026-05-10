@@ -18,13 +18,13 @@ const router = useRouter()
 const { authChecked, showPasswordInput, password, authError, checkAuth, handleLogin } = useAuth()
 const project = ref(null)
 
-// Set page title based on project and file
+// Set page title based on project and file path
 useHead(() => ({
   title: computed(() => {
     const projectName = project.value?.name || 'ClawDocu'
-    const fileName = selectedFile.value?.name || ''
-    if (fileName) {
-      return `${projectName}/${fileName}`
+    const path = filePath.value || ''
+    if (path) {
+      return `${projectName}/${path}`
     }
     return projectName
   })
