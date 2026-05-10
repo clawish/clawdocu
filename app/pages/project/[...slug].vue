@@ -559,6 +559,10 @@ watch(() => comments.value.length, () => {
   if (currentCommentIndex.value >= comments.value.length) {
     currentCommentIndex.value = Math.max(0, comments.value.length - 1)
   }
+  // Recalculate positions when comments change
+  nextTick(() => {
+    commentPositionsVersion.value++
+  })
 })
 
 function showFileMenu(event: MouseEvent, item: any) {
