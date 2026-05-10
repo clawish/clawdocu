@@ -475,6 +475,7 @@ async function handleSaveComment() {
   await saveComment(projectId.value, selectedFile.value.path, selectedLineNumber.value)
   await loadCommentCounts(projectId.value)
   await nextTick()
+  await nextTick() // Double nextTick to ensure DOM is fully updated
   commentPositionsVersion.value++
   updateContentHeight()
 }
