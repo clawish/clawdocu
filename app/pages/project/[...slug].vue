@@ -210,11 +210,20 @@ const commentedLines = computed(() => {
   return lineSet
 })
 
-function getPositionByLineNumber(lineNumber: number): number {
+function getPositionByLineNumber(lineNumber: number, commentId?: string): number {
   if (!contentRef.value || !scrollContainerRef.value) return 0
   const containerRect = scrollContainerRef.value.getBoundingClientRect()
 
   if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value) {
+    // First try to find highlighted text by comment ID
+    if (commentId) {
+      const highlightedEl = markdownRef.value.querySelector(`mark[data-comment-id="${commentId}"]`)
+      if (highlightedEl) {
+        const rect = highlightedEl.getBoundingClientRect()
+        return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
+      }
+    }
+    // Fallback to line number
     const el = markdownRef.value.querySelector(`[data-line="${lineNumber}"]`)
     if (el) {
       const rect = el.getBoundingClientRect()
@@ -258,7 +267,7 @@ const commentPositions = computed(() => {
   let lastBottom = 0
   
   for (const comment of sortedComments.value) {
-    const baseTop = getPositionByLineNumber(comment.lineNumber || 1)
+    const baseTop = getPositionByLineNumber(comment.lineNumber || 1, comment.id)
     // Ensure this comment starts below the previous one with margin
     const adjustedTop = Math.max(baseTop, lastBottom + 8) // 8px margin
     positions[comment.id] = adjustedTop
@@ -475,6 +484,7 @@ async function handleSaveComment() {
   await saveComment(projectId.value, selectedFile.value.path, selectedLineNumber.value)
   await loadCommentCounts(projectId.value)
   await nextTick()
+  await nextTick() // Double nextTick to ensure DOM is fully updated
   commentPositionsVersion.value++
   updateContentHeight()
 }
@@ -558,6 +568,10 @@ watch(() => comments.value.length, () => {
   if (currentCommentIndex.value >= comments.value.length) {
     currentCommentIndex.value = Math.max(0, comments.value.length - 1)
   }
+  // Recalculate positions when comments change
+  nextTick(() => {
+    commentPositionsVersion.value++
+  })
 })
 
 function showFileMenu(event: MouseEvent, item: any) {
