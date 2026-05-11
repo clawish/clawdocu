@@ -33,7 +33,25 @@ export default defineEventHandler(async (event) => {
   })
   
   if (!res.ok) {
-    throw createError({ statusCode: res.status, message: 'Failed to fetch file from GitHub' })
+    const errorData = await res.json().catch(() => ({}))
+    console.error(`[file.get] GitHub API error: ${res.status}`, { 
+      projectId, 
+      filePath, 
+      branch,
+      error: errorData 
+    })
+    
+    if (res.status === 404) {
+      throw createError({ 
+        statusCode: 404, 
+        message: `File not found: ${filePath}` 
+      })
+    }
+    
+    throw createError({ 
+      statusCode: res.status, 
+      message: errorData.message || 'Failed to fetch file from GitHub' 
+    })
   }
   
   const data = await res.json()

@@ -422,8 +422,16 @@ async function loadFile(item: { path: string; name: string; type: string }) {
     console.log('[loadFile] Response received, content length:', response.content?.length)
     fileContent.value = response.content || ''
     await loadComments(projectId.value, item.path)
-  } catch (e) {
+  } catch (e: any) {
     console.error('Failed to load file:', e)
+    // If file not found (404), redirect to project root
+    if (e.statusCode === 404 || e.status === 404) {
+      console.log('[loadFile] File not found, redirecting to project root')
+      const query = selectedBranch.value && selectedBranch.value !== 'main'
+        ? { branch: selectedBranch.value }
+        : {}
+      router.push({ path: `/project/${projectId.value}`, query })
+    }
   } finally {
     loading.value = false
     await nextTick()
