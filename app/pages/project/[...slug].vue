@@ -471,6 +471,13 @@ function closeCommentBoxLocal() {
   closeCommentBox()
 }
 
+function copySelectedText() {
+  if (selectedText.value) {
+    navigator.clipboard.writeText(selectedText.value)
+    showToolbar.value = false
+  }
+}
+
 watch(markdownMode, async () => {
   await nextTick()
   commentPositionsVersion.value++
@@ -1047,6 +1054,13 @@ onUnmounted(() => {
         class="fixed bg-white border border-gray-200 rounded-lg shadow-lg px-2 py-1 flex items-center gap-2 z-50"
         :style="{ top: toolbarPosition.top + 'px', left: toolbarPosition.left + 'px' }"
       >
+        <button 
+          @click="copySelectedText"
+          class="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded"
+        >
+          <Icon name="i-lucide-copy" class="w-4 h-4" />
+          <span>Copy</span>
+        </button>
         <button 
           @click="openCommentBoxLocal"
           class="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded"
