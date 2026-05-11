@@ -15,20 +15,21 @@ const emit = defineEmits<{
 
 const commentRef = ref<HTMLElement | null>(null)
 
-// Report height after render
+// Use VueUse's useElementSize for reactive height tracking
+const { height } = useElementSize(commentRef)
+
+// Watch height changes and emit updates
+watch(height, (newHeight) => {
+  if (newHeight > 0) {
+    emit('heightUpdate', props.comment.id, newHeight)
+  }
+})
+
+// Also emit on mount
 onMounted(() => {
   if (commentRef.value) {
     emit('heightUpdate', props.comment.id, commentRef.value.offsetHeight)
   }
-})
-
-// Re-report height when content changes
-watch(() => props.comment.text, () => {
-  nextTick(() => {
-    if (commentRef.value) {
-      emit('heightUpdate', props.comment.id, commentRef.value.offsetHeight)
-    }
-  })
 })
 
 const formatDate = (dateStr: string) => {
