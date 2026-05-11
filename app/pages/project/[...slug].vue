@@ -260,6 +260,8 @@ const commentBoxHeights = ref<Record<string, number>>({})
 // Update comment box height after render
 function updateCommentBoxHeight(commentId: string, height: number) {
   commentBoxHeights.value[commentId] = height
+  // Trigger re-calculation of positions
+  commentPositionsVersion.value++
 }
 
 // Pre-calculated comment positions to prevent overlap
@@ -267,18 +269,33 @@ const commentPositions = computed(() => {
   void commentPositionsVersion.value
   
   const positions: Record<string, number> = {}
-  const minCommentHeight = 120 // Minimum height for a comment box
-  const margin = 16 // Margin between comments
-  let lastBottom = 0
+  const minCommentHeight = 150 // Minimum height for a comment box (increased)
+  const margin = 20 // Margin between comments (increased to 20px)
+  
+  // Track placed comments and their bottom positions
+  const placedComments: { id: string; top: number; bottom: number }[] = []
   
   for (const comment of sortedComments.value) {
     const baseTop = getPositionByLineNumber(comment.lineNumber || 1, comment.id)
     // Use actual height if available, otherwise use minimum
-    const actualHeight = commentBoxHeights.value[comment.id] || minCommentHeight
-    // Ensure this comment starts below the previous one with margin
-    const adjustedTop = Math.max(baseTop, lastBottom + margin)
+    const height = commentBoxHeights.value[comment.id] || minCommentHeight
+    
+    // Check collision with all previously placed comments
+    let adjustedTop = baseTop
+    for (const placed of placedComments) {
+      // If this comment's desired position overlaps with a placed comment
+      if (adjustedTop < placed.bottom + margin) {
+        // Move it down to avoid overlap
+        adjustedTop = Math.max(adjustedTop, placed.bottom + margin)
+      }
+    }
+    
     positions[comment.id] = adjustedTop
-    lastBottom = adjustedTop + actualHeight
+    placedComments.push({
+      id: comment.id,
+      top: adjustedTop,
+      bottom: adjustedTop + height
+    })
   }
   
   return positions

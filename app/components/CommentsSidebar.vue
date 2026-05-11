@@ -26,31 +26,34 @@ const emit = defineEmits<{
 
 <template>
   <div class="w-80 shrink-0 grow-0 overflow-hidden border-l border-gray-200 bg-gray-50 overflow-y-auto">
-    <!-- Comments container - uses flex with gap for auto spacing -->
-    <div class="p-4 space-y-4">
+    <!-- Comments positioned by line number -->
+    <div class="relative z-0" :style="{ minHeight: contentHeight ? contentHeight + 'px' : (linesCount * 24 + 100) + 'px' }">
       <!-- Comment Input Box -->
       <CommentInput 
         v-if="showCommentBox"
         v-model:commentText="commentText"
         :selectedText="selectedText"
-        :top="0"
+        :top="commentBoxTop"
         @save="emit('save')"
         @cancel="emit('cancel')"
       />
       
-      <!-- Comments stacked with natural spacing -->
+      <!-- Comments at their line positions -->
       <CommentItem
         v-for="(comment, idx) in sortedComments" 
         :key="comment.id"
         :comment="comment"
         :active="idx === currentCommentIndex"
-        :top="0"
+        :top="getCommentTop(comment)"
         @delete="emit('delete', $event)"
         @click="emit('clickComment', comment)"
+        @heightUpdate="(id, height) => emit('heightUpdate', id, height)"
       />
-      
-      <!-- Empty state -->
-      <div v-if="comments.length === 0 && !showCommentBox" class="text-gray-400 text-sm text-center py-8">
+    </div>
+    
+    <!-- Empty state -->
+    <div v-if="comments.length === 0 && !showCommentBox" class="p-4">
+      <div class="text-gray-400 text-sm text-center py-8">
         Select text to add a comment.
       </div>
     </div>
