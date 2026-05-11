@@ -58,7 +58,7 @@ export const useComments = () => {
   }
 
   // Close comment box
-  const closeCommentBox = (resetPosition = true) => {
+  const closeCommentBox = (resetPosition = false) => {
     showCommentBox.value = false
     selectedText.value = ''
     commentText.value = ''
