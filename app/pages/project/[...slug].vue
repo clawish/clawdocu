@@ -196,12 +196,16 @@ const renderedMarkdown = computed(() => {
   // Highlight commented text in rendered markdown
   for (const comment of comments.value) {
     if (comment.selectedText) {
-      // Escape special regex characters
-      const escapedText = comment.selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      // Create a regex to find the text (case-sensitive, first occurrence)
-      const regex = new RegExp(`(${escapedText})`, 'g')
-      // Wrap with highlight span
-      html = html.replace(regex, '<mark class="bg-red-100 text-inherit rounded px-0.5" data-comment-id="' + comment.id + '">$1</mark>')
+      // Get only the first line of selected text for highlighting
+      const firstLine = comment.selectedText.split('\n')[0]
+      if (firstLine && firstLine.trim()) {
+        // Escape special regex characters
+        const escapedText = firstLine.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        // Create a regex to find the text (case-sensitive, first occurrence)
+        const regex = new RegExp(`(${escapedText})`, 'g')
+        // Wrap with highlight span
+        html = html.replace(regex, '<mark class="bg-red-100 text-inherit rounded px-0.5" data-comment-id="' + comment.id + '">$1</mark>')
+      }
     }
   }
   
