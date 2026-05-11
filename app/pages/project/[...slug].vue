@@ -67,6 +67,8 @@ const {
   commentCounts,
   loadTree,
   loadCommentCounts,
+  incrementCommentCount,
+  decrementCommentCount,
   toggleFolder,
   selectFile,
   changeBranch,
@@ -489,7 +491,8 @@ watch(markdownMode, async () => {
 async function handleSaveComment() {
   if (!commentText.value.trim() || !selectedFile.value?.path) return
   await saveComment(projectId.value, selectedFile.value.path, selectedLineNumber.value)
-  await loadCommentCounts(projectId.value)
+  // Update comment count locally (no need to fetch from API)
+  incrementCommentCount(selectedFile.value.path)
   await nextTick()
   await nextTick()
   await nextTick() // Triple nextTick to ensure markdown highlights are rendered
@@ -543,7 +546,10 @@ function handleClickComment(comment: any) {
 
 async function handleDeleteComment(commentId: string) {
   await deleteComment(projectId.value, commentId)
-  await loadCommentCounts(projectId.value)
+  // Update comment count locally (no need to fetch from API)
+  if (selectedFile.value?.path) {
+    decrementCommentCount(selectedFile.value.path)
+  }
   await nextTick()
   commentPositionsVersion.value++
   updateContentHeight()

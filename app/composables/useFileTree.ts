@@ -101,6 +101,31 @@ export const useFileTree = () => {
     }
   }
 
+  // Increment comment count for a file (local update, no API call)
+  const incrementCommentCount = (filePath: string) => {
+    const currentCount = commentCounts.value[filePath] || 0
+    commentCounts.value = {
+      ...commentCounts.value,
+      [filePath]: currentCount + 1
+    }
+  }
+
+  // Decrement comment count for a file (local update, no API call)
+  const decrementCommentCount = (filePath: string) => {
+    const currentCount = commentCounts.value[filePath] || 0
+    if (currentCount <= 1) {
+      // Remove the key if count would be 0
+      const newCounts = { ...commentCounts.value }
+      delete newCounts[filePath]
+      commentCounts.value = newCounts
+    } else {
+      commentCounts.value = {
+        ...commentCounts.value,
+        [filePath]: currentCount - 1
+      }
+    }
+  }
+
   // Toggle folder expansion
   const toggleFolder = (path: string) => {
     if (expandedPaths.value.has(path)) {
@@ -329,6 +354,8 @@ export const useFileTree = () => {
     // Methods
     loadTree,
     loadCommentCounts,
+    incrementCommentCount,
+    decrementCommentCount,
     toggleFolder,
     selectFile,
     changeBranch,
