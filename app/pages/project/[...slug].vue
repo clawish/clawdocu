@@ -227,32 +227,10 @@ function getPositionByLineNumber(lineNumber: number, commentId?: string): number
   const containerRect = scrollContainerRef.value.getBoundingClientRect()
 
   if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value) {
-    // First try to find highlighted text by comment ID
-    if (commentId) {
-      const highlightedEl = markdownRef.value.querySelector(`mark[data-comment-id="${commentId}"]`)
-      if (highlightedEl) {
-        const rect = highlightedEl.getBoundingClientRect()
-        return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
-      }
-    }
-    // Fallback to line number
+    // Find element with data-line attribute
     const el = markdownRef.value.querySelector(`[data-line="${lineNumber}"]`)
     if (el) {
       const rect = el.getBoundingClientRect()
-      return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
-    }
-    const allLineEls = markdownRef.value.querySelectorAll('[data-line]')
-    let closestEl: Element | null = null
-    let closestLine = 0
-    for (const lineEl of allLineEls) {
-      const elLine = parseInt(lineEl.getAttribute('data-line') || '0', 10)
-      if (elLine <= lineNumber && elLine > closestLine) {
-        closestLine = elLine
-        closestEl = lineEl
-      }
-    }
-    if (closestEl) {
-      const rect = closestEl.getBoundingClientRect()
       return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
     }
     return 0
