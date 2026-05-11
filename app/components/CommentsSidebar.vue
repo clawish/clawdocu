@@ -20,6 +20,7 @@ const emit = defineEmits<{
   'cancel': []
   'delete': [id: string]
   'clickComment': [comment: Comment]
+  'heightUpdate': [id: string, height: number]
 }>()
 </script>
 
@@ -46,6 +47,7 @@ const emit = defineEmits<{
         :top="getCommentTop(comment)"
         @delete="emit('delete', $event)"
         @click="emit('clickComment', comment)"
+        @heightUpdate="emit('heightUpdate', $event.id, $event.height)"
       />
     </div>
     

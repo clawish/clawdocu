@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Comment } from '~/composables/useComments'
 
-defineProps<{
+const props = defineProps<{
   comment: Comment
   active: boolean
   top: number
@@ -10,7 +10,26 @@ defineProps<{
 const emit = defineEmits<{
   delete: [id: string]
   click: [comment: Comment]
+  heightUpdate: [id: string, height: number]
 }>()
+
+const commentRef = ref<HTMLElement | null>(null)
+
+// Report height after render
+onMounted(() => {
+  if (commentRef.value) {
+    emit('heightUpdate', props.comment.id, commentRef.value.offsetHeight)
+  }
+})
+
+// Re-report height when content changes
+watch(() => props.comment.text, () => {
+  nextTick(() => {
+    if (commentRef.value) {
+      emit('heightUpdate', props.comment.id, commentRef.value.offsetHeight)
+    }
+  })
+})
 
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr)
@@ -25,6 +44,7 @@ const formatDate = (dateStr: string) => {
 
 <template>
   <div 
+    ref="commentRef"
     class="absolute left-4 right-4 bg-white rounded-lg p-3 border-l-2 shadow-sm transition-all duration-200 cursor-pointer"
     :class="active ? 'border-red-600 ring-2 ring-red-300 shadow-md' : 'border-red-500'"
     :style="{ top: top + 'px' }"

@@ -254,20 +254,31 @@ function getPositionByLineNumber(lineNumber: number, commentId?: string): number
   return (lineNumber - 1) * 24 + 24
 }
 
+// Track actual comment box heights after rendering
+const commentBoxHeights = ref<Record<string, number>>({})
+
+// Update comment box height after render
+function updateCommentBoxHeight(commentId: string, height: number) {
+  commentBoxHeights.value[commentId] = height
+}
+
 // Pre-calculated comment positions to prevent overlap
 const commentPositions = computed(() => {
   void commentPositionsVersion.value
   
   const positions: Record<string, number> = {}
-  const commentHeight = 160 // Height + margin between comments (increased)
+  const minCommentHeight = 120 // Minimum height for a comment box
+  const margin = 16 // Margin between comments
   let lastBottom = 0
   
   for (const comment of sortedComments.value) {
     const baseTop = getPositionByLineNumber(comment.lineNumber || 1, comment.id)
+    // Use actual height if available, otherwise use minimum
+    const actualHeight = commentBoxHeights.value[comment.id] || minCommentHeight
     // Ensure this comment starts below the previous one with margin
-    const adjustedTop = Math.max(baseTop, lastBottom + 16) // 16px margin (increased from 8px)
+    const adjustedTop = Math.max(baseTop, lastBottom + margin)
     positions[comment.id] = adjustedTop
-    lastBottom = adjustedTop + commentHeight
+    lastBottom = adjustedTop + actualHeight
   }
   
   return positions
@@ -898,6 +909,7 @@ onUnmounted(() => {
               @cancel="closeCommentBoxLocal"
               @delete="handleDeleteComment"
               @clickComment="handleClickComment"
+              @heightUpdate="updateCommentBoxHeight"
             />
             
             <!-- Empty Comments Sidebar (no file) -->
