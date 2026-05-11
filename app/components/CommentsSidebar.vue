@@ -25,35 +25,32 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="w-80 shrink-0 grow-0 overflow-hidden border-l border-gray-200 bg-gray-50">
-    <!-- Comments positioned by line number -->
-    <div class="relative z-0" :style="{ minHeight: contentHeight ? contentHeight + 'px' : (linesCount * 24 + 100) + 'px' }">
+  <div class="w-80 shrink-0 grow-0 overflow-hidden border-l border-gray-200 bg-gray-50 overflow-y-auto">
+    <!-- Comments container - uses flex with gap for auto spacing -->
+    <div class="p-4 space-y-4">
       <!-- Comment Input Box -->
       <CommentInput 
         v-if="showCommentBox"
         v-model:commentText="commentText"
         :selectedText="selectedText"
-        :top="commentBoxTop"
+        :top="0"
         @save="emit('save')"
         @cancel="emit('cancel')"
       />
       
-      <!-- Comments at their line positions -->
+      <!-- Comments stacked with natural spacing -->
       <CommentItem
         v-for="(comment, idx) in sortedComments" 
         :key="comment.id"
         :comment="comment"
         :active="idx === currentCommentIndex"
-        :top="getCommentTop(comment)"
+        :top="0"
         @delete="emit('delete', $event)"
         @click="emit('clickComment', comment)"
-        @heightUpdate="emit('heightUpdate', $event.id, $event.height)"
       />
-    </div>
-    
-    <!-- Empty state -->
-    <div v-if="comments.length === 0 && !showCommentBox" class="p-4">
-      <div class="text-gray-400 text-sm text-center py-8">
+      
+      <!-- Empty state -->
+      <div v-if="comments.length === 0 && !showCommentBox" class="text-gray-400 text-sm text-center py-8">
         Select text to add a comment.
       </div>
     </div>
