@@ -441,10 +441,10 @@ watch(
       if (rects && rects.length > 0) {
         // Use the first rectangle (top line of selection)
         const firstRect = rects[0]
-        // Position toolbar above the selected text, centered on first line
+        // Position toolbar at top-left of selected text
         toolbarPosition.value = {
           top: firstRect.top - 45,
-          left: firstRect.left + (firstRect.width / 2) - 50  // Center of first line text
+          left: firstRect.left  // Left edge of first line text
         }
         if (scrollContainerRef.value) {
           const containerRect = scrollContainerRef.value.getBoundingClientRect()
