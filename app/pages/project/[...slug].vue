@@ -18,6 +18,16 @@ const router = useRouter()
 const { authChecked, showPasswordInput, password, authError, checkAuth, handleLogin } = useAuth()
 const project = ref(null)
 
+// Parse slug: first segment is projectId, rest is filePath
+const slug = computed(() => {
+  const s = route.params.slug
+  return Array.isArray(s) ? s : s ? [s] : []
+})
+
+const projectId = computed(() => slug.value[0] || '')
+const filePath = computed(() => slug.value.slice(1).join('/'))
+const hasFile = computed(() => filePath.value.length > 0)
+
 // Set page title based on project and file path
 useHead(() => ({
   title: computed(() => {
@@ -29,16 +39,6 @@ useHead(() => ({
     return projectName
   })
 }))
-
-// Parse slug: first segment is projectId, rest is filePath
-const slug = computed(() => {
-  const s = route.params.slug
-  return Array.isArray(s) ? s : s ? [s] : []
-})
-
-const projectId = computed(() => slug.value[0] || '')
-const filePath = computed(() => slug.value.slice(1).join('/'))
-const hasFile = computed(() => filePath.value.length > 0)
 
 // Use composables
 const {
