@@ -259,13 +259,13 @@ const commentPositions = computed(() => {
   void commentPositionsVersion.value
   
   const positions: Record<string, number> = {}
-  const commentHeight = 140 // Height + margin between comments
+  const commentHeight = 160 // Height + margin between comments (increased)
   let lastBottom = 0
   
   for (const comment of sortedComments.value) {
     const baseTop = getPositionByLineNumber(comment.lineNumber || 1, comment.id)
     // Ensure this comment starts below the previous one with margin
-    const adjustedTop = Math.max(baseTop, lastBottom + 8) // 8px margin
+    const adjustedTop = Math.max(baseTop, lastBottom + 16) // 16px margin (increased from 8px)
     positions[comment.id] = adjustedTop
     lastBottom = adjustedTop + commentHeight
   }
