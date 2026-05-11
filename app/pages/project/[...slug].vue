@@ -439,14 +439,16 @@ watch(
       selectedText.value = text
       const rects = textSelection.rects.value
       if (rects && rects.length > 0) {
-        const rect = rects[0]
+        // Use the first rectangle (top line of selection)
+        const firstRect = rects[0]
+        // Position toolbar at top-right of first line
         toolbarPosition.value = {
-          top: rect.top - 45,
-          left: rect.left + rect.width / 2 - 50
+          top: firstRect.top - 45,
+          left: firstRect.right - 100  // Right edge of first line, toolbar width ~100px
         }
         if (scrollContainerRef.value) {
           const containerRect = scrollContainerRef.value.getBoundingClientRect()
-          commentBoxTop.value = rect.top - containerRect.top + scrollContainerRef.value.scrollTop
+          commentBoxTop.value = firstRect.top - containerRect.top + scrollContainerRef.value.scrollTop
         }
       }
       const domLine = findLineNumberFromDOM()
