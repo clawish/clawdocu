@@ -504,7 +504,8 @@ async function handleSaveComment() {
   await saveComment(projectId.value, selectedFile.value.path, selectedLineNumber.value)
   await loadCommentCounts(projectId.value)
   await nextTick()
-  await nextTick() // Double nextTick to ensure DOM is fully updated
+  await nextTick()
+  await nextTick() // Triple nextTick to ensure markdown highlights are rendered
   commentPositionsVersion.value++
   updateContentHeight()
 }
@@ -584,14 +585,14 @@ function navigateComment(direction: 1 | -1) {
   }
 }
 
-watch(() => comments.value.length, () => {
+watch(() => comments.value.length, async () => {
   if (currentCommentIndex.value >= comments.value.length) {
     currentCommentIndex.value = Math.max(0, comments.value.length - 1)
   }
   // Recalculate positions when comments change
-  nextTick(() => {
-    commentPositionsVersion.value++
-  })
+  await nextTick()
+  await nextTick()
+  commentPositionsVersion.value++
 })
 
 function showFileMenu(event: MouseEvent, item: any) {
