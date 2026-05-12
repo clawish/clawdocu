@@ -1,6 +1,7 @@
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import injectLinenumbers from 'markdown-it-inject-linenumbers'
+import katex from '@traptitech/markdown-it-katex'
 
 const md = new MarkdownIt({
   html: true,
@@ -16,8 +17,9 @@ const md = new MarkdownIt({
   }
 })
 
-// Use the plugin to inject line numbers for block elements
+// Use plugins
 md.use(injectLinenumbers)
+md.use(katex, { throwOnError: false, errorColor: ' #cc0000' })
 
 // Override fence renderer to add line numbers to each line inside code blocks
 const defaultFence = md.renderer.rules.fence || function(tokens, idx, options, env, self) {
