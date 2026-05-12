@@ -46,7 +46,7 @@ const handleSelectFile = (item: TreeItem) => {
   <aside 
     v-if="sidebarOpen"
     class="w-64 shrink-0 border-r border-gray-200 bg-white flex flex-col"
-    style="height: calc(100vh - 60px);"
+    style="height: calc(100vh - 56px);"
   >
     <!-- Fixed header section -->
     <div class="p-4 shrink-0">

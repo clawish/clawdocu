@@ -857,9 +857,9 @@ onUnmounted(() => {
   </div>
   
   <!-- Main Content (when authenticated) -->
-  <div v-else class="flex-1 flex min-h-0 relative">
+  <div v-else class="h-full flex">
     <!-- File Tree Sidebar (desktop only) -->
-    <div class="hidden md:block">
+    <div class="hidden md:block shrink-0 h-full">
       <FileTree 
         :projectId="projectId"
         v-model:sidebarOpen="sidebarOpen"
