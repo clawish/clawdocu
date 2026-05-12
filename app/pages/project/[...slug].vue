@@ -98,6 +98,7 @@ const selectedLineNumber = ref(1)
 const currentCommentIndex = ref(0)
 const mobileTab = ref<'files' | 'comments' | null>(null)
 const lastLoadedPath = ref<string>('') // Track last loaded path to prevent duplicates
+const breadcrumbBar = ref(null) // Ref for breadcrumb bar to check scrollbar-gutter
 
 // Find line number from DOM
 function findLineNumberFromDOM(): number {
@@ -127,6 +128,14 @@ onMounted(() => {
   window.addEventListener('resize', () => {
     windowWidth.value = window.innerWidth
   })
+  
+  // Check scrollbar-gutter on breadcrumb bar
+  if (breadcrumbBar.value) {
+    const styles = window.getComputedStyle(breadcrumbBar.value)
+    console.log('[BreadcrumbBar] scrollbar-gutter:', styles.scrollbarGutter)
+    console.log('[BreadcrumbBar] overflow:', styles.overflow)
+    console.log('[BreadcrumbBar] width:', breadcrumbBar.value.offsetWidth)
+  }
 })
 
 const isMarkdown = computed(() => {
@@ -871,7 +880,7 @@ onUnmounted(() => {
     <!-- Main Content Area with Comments -->
     <div class="flex-1 flex min-w-0 flex-col min-h-0 pb-14 md:pb-0">
       <!-- File Header (Fixed, no scroll) -->
-      <div class="flex shrink-0 border-b border-gray-200 bg-white" style="scrollbar-gutter: stable;">
+      <div ref="breadcrumbBar" class="flex shrink-0 border-b border-gray-200 bg-white" style="scrollbar-gutter: stable;">
         <div class="flex-1 min-w-0 flex items-center justify-between px-4 py-3">
           <div class="flex items-center gap-2 text-sm overflow-x-auto">
             <span class="text-gray-400 whitespace-nowrap">{{ project?.fullName }}</span>
