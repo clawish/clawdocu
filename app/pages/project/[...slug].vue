@@ -882,7 +882,6 @@ onUnmounted(() => {
       <!-- File Header (Fixed, no scroll) -->
       <div ref="breadcrumbBar" class="flex shrink-0 border-b border-gray-200 bg-white overflow-y-auto" style="scrollbar-gutter: stable">
         <div class="flex-1 min-w-0 flex items-center justify-between px-4 py-3">
-        <div class="flex-1 min-w-0 flex items-center justify-between px-4 py-3">
           <div class="flex items-center gap-2 text-sm overflow-x-auto">
             <span class="text-gray-400 whitespace-nowrap">{{ project?.fullName }}</span>
             <span class="text-gray-300">/</span>
