@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
   
   const owner = proj.fullName.split('/')[0]
   const repo = proj.fullName.split('/')[1]
-  const commentPath = '.clawdocu/comments.json'
+  const commentPath = '.clawdocu-comments/comments.json'
   
   // Try to fetch comments from GitHub
   try {
