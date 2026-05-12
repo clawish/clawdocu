@@ -97,6 +97,7 @@ const commentPositionsVersion = ref(0)
 const selectedLineNumber = ref(1)
 const currentCommentIndex = ref(0)
 const mobileTab = ref<'files' | 'comments' | null>(null)
+const lastLoadedPath = ref<string>('') // Track last loaded path to prevent duplicates
 
 // Find line number from DOM
 function findLineNumberFromDOM(): number {
@@ -106,8 +107,9 @@ function findLineNumberFromDOM(): number {
       const range = selection.getRangeAt(0)
       let node: Node | null = range.startContainer
       while (node && node !== markdownRef.value) {
-        if (node instanceof Element && node.hasAttribute('data-line')) {
-          return parseInt(node.getAttribute('data-line') || '1', 10)
+        if (node instanceof Element && node.hasAttribute('data-source-line')) {
+          // Plugin uses 0-indexed, convert to 1-indexed
+          return parseInt(node.getAttribute('data-source-line') || '0', 10) + 1
         }
         node = node.parentElement
       }
@@ -230,11 +232,13 @@ const commentedLines = computed(() => {
 
 function getPositionByLineNumber(lineNumber: number): number | null {
   if (!contentRef.value || !scrollContainerRef.value) return null
+  
   const containerRect = scrollContainerRef.value.getBoundingClientRect()
 
   if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value) {
-    // Find element with data-line attribute
-    const el = markdownRef.value.querySelector(`[data-line="${lineNumber}"]`)
+    // Find element with data-source-line attribute (from markdown-it-inject-linenumbers plugin)
+    // Note: plugin uses 0-indexed lines, so we need to subtract 1
+    const el = markdownRef.value.querySelector(`[data-source-line="${lineNumber - 1}"]`)
     if (el) {
       const rect = el.getBoundingClientRect()
       return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
@@ -478,8 +482,15 @@ async function loadFile(item: { path: string; name: string; type: string }) {
     return
   }
   
+  // Prevent duplicate loads of the same file
+  if (lastLoadedPath.value === item.path && fileContent.value) {
+    console.log('[loadFile] Skipping duplicate load of:', item.path)
+    return
+  }
+  
   loading.value = true
   selectFile(item as any)
+  lastLoadedPath.value = item.path
   
   console.log('[loadFile] Loading file:', item.path, 'with branch:', selectedBranch.value)
   
@@ -646,85 +657,45 @@ async function handleDeleteComment(commentId: string) {
   }
 }
 
-function findScrollableParent(element: HTMLElement | null): HTMLElement | null {
-  while (element) {
-    const { overflowY, overflowX } = window.getComputedStyle(element)
-    const canScrollY = overflowY === 'auto' || overflowY === 'scroll'
-    const hasOverflow = element.scrollHeight > element.clientHeight
-    
-    console.log('[findScrollableParent] Checking:', element.className, {
-      overflowY,
-      scrollHeight: element.scrollHeight,
-      clientHeight: element.clientHeight,
-      hasOverflow,
-      canScrollY
-    })
-    
-    if (canScrollY && hasOverflow) {
-      console.log('[findScrollableParent] Found scrollable parent:', element.className)
-      return element
-    }
-    
-    element = element.parentElement
-  }
-  return null
-}
-
 function scrollToCommentLine(comment: any) {
-  console.log('[scrollToCommentLine] Called with comment:', comment)
-  console.log('[scrollToCommentLine] scrollContainerRef:', scrollContainerRef.value)
+  // Check if this comment is orphaned
+  const isCommentOrphaned = orphanedCommentIds.value.has(comment.id)
   
-  // Find the actual scrollable parent
-  const scrollParent = findScrollableParent(scrollContainerRef.value)
-  console.log('[scrollToCommentLine] Actual scroll parent:', scrollParent)
+  if (isCommentOrphaned) {
+    return
+  }
   
   const top = getCommentTop(comment)
-  console.log('[scrollToCommentLine] Computed top:', top)
   
-  const targetElement = scrollParent || scrollContainerRef.value
-  
-  if (targetElement && top !== null) {
-    const scrollTarget = Math.max(0, top - 100)
-    console.log('[scrollToCommentLine] Scrolling to:', scrollTarget)
-    console.log('[scrollToCommentLine] Current scrollTop:', targetElement.scrollTop)
-    console.log('[scrollToCommentLine] Scroll height:', targetElement.scrollHeight)
-    console.log('[scrollToCommentLine] Client height:', targetElement.clientHeight)
-    console.log('[scrollToCommentLine] Can scroll?', targetElement.scrollHeight > targetElement.clientHeight)
-    
-    // Try direct assignment
-    targetElement.scrollTop = scrollTarget
-    console.log('[scrollToCommentLine] After direct assignment - scrollTop:', targetElement.scrollTop)
-    
-    // Also try scrollTo as backup
-    // targetElement.scrollTo({ top: scrollTarget, behavior: 'smooth' })
-  } else {
-    console.log('[scrollToCommentLine] Not scrolling - targetElement:', !!targetElement, 'top:', top)
+  if (top === null || top === undefined) {
+    return
   }
+  
+  const scrollTarget = Math.max(0, top - 100)
+  
+  // Try scrollContainerRef first
+  if (scrollContainerRef.value && scrollContainerRef.value.scrollHeight > scrollContainerRef.value.clientHeight) {
+    scrollContainerRef.value.scrollTo({ top: scrollTarget, behavior: 'smooth' })
+    return
+  }
+  
+  // Fallback: scroll the window/body
+  window.scrollTo({ top: scrollTarget, behavior: 'smooth' })
 }
 
 function navigateComment(direction: 1 | -1) {
-  console.log('[navigateComment] Called with direction:', direction)
-  console.log('[navigateComment] sortedComments.length:', sortedComments.value.length)
-  console.log('[navigateComment] currentCommentIndex before:', currentCommentIndex.value)
-  
   const total = sortedComments.value.length
-  if (total === 0) {
-    console.log('[navigateComment] No comments, returning')
-    return
-  }
+  if (total === 0) return
   
   let newIndex = currentCommentIndex.value + direction
   if (newIndex < 0) newIndex = total - 1
   if (newIndex >= total) newIndex = 0
   
-  console.log('[navigateComment] newIndex:', newIndex)
   currentCommentIndex.value = newIndex
   
   const comment = sortedComments.value[currentCommentIndex.value]
-  console.log('[navigateComment] Target comment:', comment)
   
   if (comment) {
-    console.log('[navigateComment] Calling scrollToCommentLine')
     scrollToCommentLine(comment)
   }
 }
@@ -1002,7 +973,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Scrollable Content + Comments Container -->
-      <div ref="scrollContainerRef" class="flex-1 overflow-auto bg-white" style="scrollbar-gutter: stable">
+      <div ref="scrollContainerRef" class="flex-1 overflow-auto bg-white h-0" style="scrollbar-gutter: stable">
         <div class="flex min-h-full">
           <!-- File Content -->
           <div ref="contentRef" class="flex-1 min-w-0 p-4 md:p-6 bg-white relative">
