@@ -45,9 +45,11 @@ const handleSelectFile = (item: TreeItem) => {
 <template>
   <aside 
     v-if="sidebarOpen"
-    class="w-64 shrink-0 border-r border-gray-200 bg-white overflow-y-auto"
+    class="w-64 shrink-0 border-r border-gray-200 bg-white flex flex-col"
+    style="height: calc(100vh - 60px);"
   >
-    <div class="p-4">
+    <!-- Fixed header section -->
+    <div class="p-4 shrink-0">
       <!-- Branch Selector -->
       <div class="mb-4">
         <label class="text-xs font-semibold text-gray-500 uppercase mb-1 block">Branch</label>
@@ -69,7 +71,10 @@ const handleSelectFile = (item: TreeItem) => {
           <Icon name="i-lucide-panel-left-close" class="w-4 h-4" />
         </button>
       </div>
+    </div>
     
+    <!-- Scrollable file list -->
+    <div class="overflow-y-auto flex-1 px-4 pb-4" style="scrollbar-gutter: stable">
       <div v-if="loading" class="text-gray-400 text-sm p-2">Loading...</div>
       <div v-else class="space-y-0.5">
         <div
