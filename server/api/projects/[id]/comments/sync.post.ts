@@ -21,122 +21,79 @@ export default defineEventHandler(async (event) => {
   
   const owner = proj.fullName.split('/')[0]
   const repo = proj.fullName.split('/')[1]
+  const commentPath = '.clawdocu/comments.json'
   
-  // Track files that need to be deleted (empty comments)
-  const filesToDelete: string[] = []
+  // Convert from Record<string, Comment[]> to files array format
+  const files: any[] = []
   
-  // Process each file's comments
   for (const [filePath, fileComments] of Object.entries(comments)) {
-    const commentPath = `.clawdocu-comments/${filePath}.json`
-    
-    // If no comments for this file, mark for deletion
-    if (!Array.isArray(fileComments) || fileComments.length === 0) {
-      filesToDelete.push(commentPath)
-      continue
-    }
-    
-    // Clean up comments - remove visualTop and ensure proper format
-    const cleanComments = fileComments.map(c => ({
-      id: c.id,
-      selectedText: c.selectedText,
-      text: c.text,
-      lineNumber: c.lineNumber,
-      createdAt: c.createdAt
-    }))
-    
-    const content = JSON.stringify({ comments: cleanComments }, null, 2)
-    const encodedContent = Buffer.from(content).toString('base64')
-    
-    // Check if file exists to get SHA
-    let sha = null
-    try {
-      const checkRes = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/vnd.github.v3+json'
-          }
-        }
-      )
-      if (checkRes.ok) {
-        const data = await checkRes.json()
-        sha = data.sha
-      }
-    } catch (e) {
-      // File doesn't exist yet
-    }
-    
-    // Create or update file
-    const putBody = {
-      message: `Update comments for ${filePath}`,
-      content: encodedContent,
-      ...(sha && { sha })
-    }
-    
-    const res = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(putBody)
-      }
-    )
-    
-    if (!res.ok) {
-      const error = await res.text()
-      console.error(`Failed to sync ${filePath}:`, error)
+    if (Array.isArray(fileComments) && fileComments.length > 0) {
+      // Clean up comments - remove visualTop and ensure proper format
+      const cleanComments = fileComments.map(c => ({
+        id: c.id,
+        lineNumber: c.lineNumber,
+        selectedText: c.selectedText,
+        text: c.text,
+        createdAt: c.createdAt
+      }))
+      
+      files.push({
+        path: filePath,
+        comments: cleanComments
+      })
     }
   }
   
-  // Delete files with no comments
-  for (const commentPath of filesToDelete) {
-    // Get SHA first
-    try {
-      const checkRes = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/vnd.github.v3+json'
-          }
-        }
-      )
-      if (checkRes.ok) {
-        const data = await checkRes.json()
-        const sha = data.sha
-        
-        // Delete the file
-        const deleteBody = {
-          message: `Remove comments file ${commentPath}`,
-          sha: sha
-        }
-        
-        const delRes = await fetch(
-          `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}`,
-          {
-            method: 'DELETE',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: 'application/vnd.github.v3+json',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(deleteBody)
-          }
-        )
-        
-        if (!delRes.ok) {
-          const error = await delRes.text()
-          console.error(`Failed to delete ${commentPath}:`, error)
+  const content = JSON.stringify({ files }, null, 2)
+  const encodedContent = Buffer.from(content).toString('base64')
+  
+  // Check if file exists to get SHA
+  let sha = null
+  try {
+    const checkRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.v3+json'
         }
       }
-    } catch (e) {
-      // File doesn't exist, nothing to delete
+    )
+    if (checkRes.ok) {
+      const data = await checkRes.json()
+      sha = data.sha
     }
+  } catch (e) {
+    // File doesn't exist yet
+  }
+  
+  // Create or update file
+  const putBody: any = {
+    message: files.length > 0 ? 'Update comments' : 'Remove comments',
+    content: encodedContent
+  }
+  
+  if (sha) {
+    putBody.sha = sha
+  }
+  
+  const res = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(putBody)
+    }
+  )
+  
+  if (!res.ok) {
+    const error = await res.text()
+    console.error('Failed to sync comments:', error)
+    throw createError({ statusCode: 500, message: 'Failed to sync comments' })
   }
   
   return { success: true, message: 'Comments synced' }
