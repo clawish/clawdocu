@@ -51,7 +51,7 @@ export const useFileTree = () => {
     // Sync branch from URL if not explicitly provided
     if (!branch) {
       syncBranchFromUrl()
-      branch = selectedBranch.value || getCurrentBranch()
+      branch = selectedBranch.value || undefined // Don't default to 'main' yet
     }
     
     // Only show loading state on initial load, not on refreshes
