@@ -3,10 +3,9 @@ import type { Ref } from 'vue'
 
 export interface Comment {
   id: string
-  path: string
+  lineNumber: number
   selectedText: string
   text: string
-  lineNumber: number
   createdAt: string
 }
 
@@ -42,6 +41,7 @@ export const useComments = () => {
   const loadAllComments = async (projectId: string) => {
     try {
       const response = await $fetch(`/api/projects/${projectId}/comments`)
+      // API returns { comments: Record<string, Comment[]> }
       allComments.value = response.comments || {}
       originalAllComments.value = JSON.parse(JSON.stringify(allComments.value))
     } catch (e) {
@@ -76,10 +76,9 @@ export const useComments = () => {
 
     const comment: Comment = {
       id: Date.now().toString(),
-      path: path,
+      lineNumber: lineNumber || 1,
       selectedText: selectedText.value,
       text: commentText.value,
-      lineNumber: lineNumber || 1,
       createdAt: new Date().toISOString()
     }
 
