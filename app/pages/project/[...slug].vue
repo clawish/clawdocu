@@ -871,7 +871,7 @@ onUnmounted(() => {
     <!-- Main Content Area with Comments -->
     <div class="flex-1 flex min-w-0 flex-col min-h-0 pb-14 md:pb-0">
       <!-- File Header (Fixed, no scroll) -->
-      <div class="flex shrink-0 border-b border-gray-200 bg-white">
+      <div class="flex shrink-0 border-b border-gray-200 bg-white" style="scrollbar-gutter: stable;">
         <div class="flex-1 min-w-0 flex items-center justify-between px-4 py-3">
           <div class="flex items-center gap-2 text-sm overflow-x-auto">
             <span class="text-gray-400 whitespace-nowrap">{{ project?.fullName }}</span>

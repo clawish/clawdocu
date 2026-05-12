@@ -13,7 +13,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="w-80 shrink-0 grow-0 overflow-hidden border-l border-gray-200 bg-white px-4 py-3 flex items-center justify-between" style="scrollbar-gutter: stable;">
+  <div class="w-80 shrink-0 grow-0 overflow-hidden border-l border-gray-200 bg-white px-4 py-3 flex items-center justify-between">
     <h3 class="text-xs font-semibold text-gray-500 uppercase">
       Comments <span v-if="comments.length" class="text-gray-400">({{ comments.length }})</span>
     </h3>
