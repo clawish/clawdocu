@@ -11,6 +11,7 @@ defineProps<{
   contentHeight: number
   linesCount: number
   getCommentTop: (comment: Comment) => number
+  isOrphaned?: (comment: Comment) => boolean
 }>()
 
 const commentText = defineModel<string>('commentText', { default: '' })
@@ -25,7 +26,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="w-80 shrink-0 grow-0 overflow-hidden border-l border-gray-200 bg-gray-50 overflow-y-auto">
+  <div class="w-80 shrink-0 grow-0 overflow-hidden border-l border-gray-200 bg-gray-50">
     <!-- Comments positioned by line number -->
     <div class="relative z-0" :style="{ minHeight: contentHeight ? contentHeight + 'px' : (linesCount * 24 + 100) + 'px' }">
       <!-- Comment Input Box -->
@@ -45,6 +46,7 @@ const emit = defineEmits<{
         :comment="comment"
         :active="idx === currentCommentIndex"
         :top="getCommentTop(comment)"
+        :orphaned="isOrphaned?.(comment)"
         @delete="emit('delete', $event)"
         @click="emit('clickComment', comment)"
         @heightUpdate="(id, height) => emit('heightUpdate', id, height)"

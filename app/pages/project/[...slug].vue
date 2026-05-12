@@ -228,8 +228,8 @@ const commentedLines = computed(() => {
   return lineSet
 })
 
-function getPositionByLineNumber(lineNumber: number, commentId?: string): number {
-  if (!contentRef.value || !scrollContainerRef.value) return 0
+function getPositionByLineNumber(lineNumber: number): number | null {
+  if (!contentRef.value || !scrollContainerRef.value) return null
   const containerRect = scrollContainerRef.value.getBoundingClientRect()
 
   if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value) {
@@ -239,7 +239,8 @@ function getPositionByLineNumber(lineNumber: number, commentId?: string): number
       const rect = el.getBoundingClientRect()
       return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
     }
-    return 0
+    // Line doesn't exist (deleted)
+    return null
   }
 
   const codeBlock = contentRef.value.querySelector('pre code')
@@ -250,8 +251,10 @@ function getPositionByLineNumber(lineNumber: number, commentId?: string): number
       const rect = lineEl.getBoundingClientRect()
       return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
     }
+    // Line doesn't exist (deleted)
+    return null
   }
-  return (lineNumber - 1) * 24 + 24
+  return null
 }
 
 // Track actual comment box heights after rendering
@@ -269,23 +272,37 @@ const commentPositions = computed(() => {
   void commentPositionsVersion.value
   
   const positions: Record<string, number> = {}
-  const minCommentHeight = 150 // Minimum height for a comment box (increased)
-  const margin = 20 // Margin between comments (increased to 20px)
+  const minCommentHeight = 150 // Minimum height for a comment box
+  const margin = 40 // Margin between comments
+  
+  // Get content height for orphaned comments positioning
+  const contentHeight = contentRef.value?.scrollHeight || lines.value.length * 24
+  
+  // Separate comments into valid and orphaned
+  const validComments: { comment: any; baseTop: number; height: number }[] = []
+  const orphanedComments: { comment: any; height: number }[] = []
+  
+  for (const comment of sortedComments.value) {
+    const baseTop = getPositionByLineNumber(comment.lineNumber || 1)
+    const height = commentBoxHeights.value[comment.id] || minCommentHeight
+    
+    if (baseTop !== null) {
+      // Line exists - add to valid comments
+      validComments.push({ comment, baseTop, height })
+    } else {
+      // Line doesn't exist (deleted) - add to orphaned
+      orphanedComments.push({ comment, height })
+    }
+  }
   
   // Track placed comments and their bottom positions
   const placedComments: { id: string; top: number; bottom: number }[] = []
   
-  for (const comment of sortedComments.value) {
-    const baseTop = getPositionByLineNumber(comment.lineNumber || 1, comment.id)
-    // Use actual height if available, otherwise use minimum
-    const height = commentBoxHeights.value[comment.id] || minCommentHeight
-    
-    // Check collision with all previously placed comments
+  // Position valid comments first (at their line positions)
+  for (const { comment, baseTop, height } of validComments) {
     let adjustedTop = baseTop
     for (const placed of placedComments) {
-      // If this comment's desired position overlaps with a placed comment
       if (adjustedTop < placed.bottom + margin) {
-        // Move it down to avoid overlap
         adjustedTop = Math.max(adjustedTop, placed.bottom + margin)
       }
     }
@@ -298,11 +315,50 @@ const commentPositions = computed(() => {
     })
   }
   
+  // Position orphaned comments at the bottom in order
+  let orphanedTop = contentHeight + margin // Start after content
+  for (const { comment, height } of orphanedComments) {
+    // Check collision with other orphaned comments
+    for (const placed of placedComments) {
+      if (orphanedTop < placed.bottom + margin) {
+        orphanedTop = Math.max(orphanedTop, placed.bottom + margin)
+      }
+    }
+    
+    positions[comment.id] = orphanedTop
+    placedComments.push({
+      id: comment.id,
+      top: orphanedTop,
+      bottom: orphanedTop + height
+    })
+    orphanedTop += height + margin // Move down for next orphaned comment
+  }
+  
   return positions
 })
 
+// Track orphaned comment IDs
+const orphanedCommentIds = computed(() => {
+  void commentPositionsVersion.value
+  
+  const ids = new Set<string>()
+  
+  for (const comment of sortedComments.value) {
+    const baseTop = getPositionByLineNumber(comment.lineNumber || 1)
+    if (baseTop === null) {
+      ids.add(comment.id)
+    }
+  }
+  
+  return ids
+})
+
+function isOrphaned(comment: any): boolean {
+  return orphanedCommentIds.value.has(comment.id)
+}
+
 const getCommentTop = (comment: any): number => {
-  return commentPositions.value[comment.id] || getPositionByLineNumber(comment.lineNumber || 1)
+  return commentPositions.value[comment.id] ?? 0
 }
 
 // Load project and file
@@ -590,22 +646,85 @@ async function handleDeleteComment(commentId: string) {
   }
 }
 
+function findScrollableParent(element: HTMLElement | null): HTMLElement | null {
+  while (element) {
+    const { overflowY, overflowX } = window.getComputedStyle(element)
+    const canScrollY = overflowY === 'auto' || overflowY === 'scroll'
+    const hasOverflow = element.scrollHeight > element.clientHeight
+    
+    console.log('[findScrollableParent] Checking:', element.className, {
+      overflowY,
+      scrollHeight: element.scrollHeight,
+      clientHeight: element.clientHeight,
+      hasOverflow,
+      canScrollY
+    })
+    
+    if (canScrollY && hasOverflow) {
+      console.log('[findScrollableParent] Found scrollable parent:', element.className)
+      return element
+    }
+    
+    element = element.parentElement
+  }
+  return null
+}
+
 function scrollToCommentLine(comment: any) {
-  const top = getPositionByLineNumber(comment.lineNumber || 1)
-  if (scrollContainerRef.value) {
-    scrollContainerRef.value.scrollTo({ top: Math.max(0, top - 100), behavior: 'smooth' })
+  console.log('[scrollToCommentLine] Called with comment:', comment)
+  console.log('[scrollToCommentLine] scrollContainerRef:', scrollContainerRef.value)
+  
+  // Find the actual scrollable parent
+  const scrollParent = findScrollableParent(scrollContainerRef.value)
+  console.log('[scrollToCommentLine] Actual scroll parent:', scrollParent)
+  
+  const top = getCommentTop(comment)
+  console.log('[scrollToCommentLine] Computed top:', top)
+  
+  const targetElement = scrollParent || scrollContainerRef.value
+  
+  if (targetElement && top !== null) {
+    const scrollTarget = Math.max(0, top - 100)
+    console.log('[scrollToCommentLine] Scrolling to:', scrollTarget)
+    console.log('[scrollToCommentLine] Current scrollTop:', targetElement.scrollTop)
+    console.log('[scrollToCommentLine] Scroll height:', targetElement.scrollHeight)
+    console.log('[scrollToCommentLine] Client height:', targetElement.clientHeight)
+    console.log('[scrollToCommentLine] Can scroll?', targetElement.scrollHeight > targetElement.clientHeight)
+    
+    // Try direct assignment
+    targetElement.scrollTop = scrollTarget
+    console.log('[scrollToCommentLine] After direct assignment - scrollTop:', targetElement.scrollTop)
+    
+    // Also try scrollTo as backup
+    // targetElement.scrollTo({ top: scrollTarget, behavior: 'smooth' })
+  } else {
+    console.log('[scrollToCommentLine] Not scrolling - targetElement:', !!targetElement, 'top:', top)
   }
 }
 
 function navigateComment(direction: 1 | -1) {
+  console.log('[navigateComment] Called with direction:', direction)
+  console.log('[navigateComment] sortedComments.length:', sortedComments.value.length)
+  console.log('[navigateComment] currentCommentIndex before:', currentCommentIndex.value)
+  
   const total = sortedComments.value.length
-  if (total === 0) return
+  if (total === 0) {
+    console.log('[navigateComment] No comments, returning')
+    return
+  }
+  
   let newIndex = currentCommentIndex.value + direction
   if (newIndex < 0) newIndex = total - 1
   if (newIndex >= total) newIndex = 0
+  
+  console.log('[navigateComment] newIndex:', newIndex)
   currentCommentIndex.value = newIndex
+  
   const comment = sortedComments.value[currentCommentIndex.value]
+  console.log('[navigateComment] Target comment:', comment)
+  
   if (comment) {
+    console.log('[navigateComment] Calling scrollToCommentLine')
     scrollToCommentLine(comment)
   }
 }
@@ -779,7 +898,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Main Content Area with Comments -->
-    <div class="flex-1 flex min-w-0 flex-col pb-14 md:pb-0">
+    <div class="flex-1 flex min-w-0 flex-col min-h-0 pb-14 md:pb-0">
       <!-- File Header -->
       <div class="flex shrink-0 border-b border-gray-200 bg-white overflow-y-auto" style="scrollbar-gutter: stable">
         <div class="flex-1 min-w-0 flex items-center justify-between px-4 py-3">
@@ -886,7 +1005,7 @@ onUnmounted(() => {
       <div ref="scrollContainerRef" class="flex-1 overflow-auto bg-white" style="scrollbar-gutter: stable">
         <div class="flex min-h-full">
           <!-- File Content -->
-          <div ref="contentRef" class="flex-1 min-w-0 p-4 md:p-6 bg-white">
+          <div ref="contentRef" class="flex-1 min-w-0 p-4 md:p-6 bg-white relative">
             <!-- Loading -->
             <div v-if="loading" class="text-gray-400 text-center py-8">Loading...</div>
             
@@ -922,6 +1041,7 @@ onUnmounted(() => {
               :contentHeight="contentHeight"
               :linesCount="lines.length"
               :getCommentTop="getCommentTop"
+              :isOrphaned="isOrphaned"
               @save="handleSaveComment"
               @cancel="closeCommentBoxLocal"
               @delete="handleDeleteComment"

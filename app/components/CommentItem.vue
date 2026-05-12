@@ -5,6 +5,7 @@ const props = defineProps<{
   comment: Comment
   active: boolean
   top: number
+  orphaned?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -47,13 +48,18 @@ const formatDate = (dateStr: string) => {
   <div 
     ref="commentRef"
     class="absolute left-4 right-4 bg-white rounded-lg p-3 border-l-2 shadow-sm transition-all duration-200 cursor-pointer"
-    :class="active ? 'border-red-600 ring-2 ring-red-300 shadow-md' : 'border-red-500'"
+    :class="[
+      active ? 'border-red-600 ring-2 ring-red-300 shadow-md' : 'border-red-500',
+      orphaned ? 'opacity-60' : ''
+    ]"
     :style="{ top: top + 'px' }"
     @click="emit('click', comment)"
   >
     <div class="text-xs text-gray-500 mb-1 flex items-center gap-2">
       <span class="bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-medium">
         Line {{ comment.lineNumber || 1 }}
+      </span>
+      <span v-if="orphaned" class="bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-medium">\        ⚠ Deleted
       </span>
       <span>{{ formatDate(comment.createdAt) }}</span>
     </div>
