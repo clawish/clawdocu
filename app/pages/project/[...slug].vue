@@ -8,14 +8,13 @@ import 'highlight.js/styles/github.css'
 const { parse: parseMarkdown } = useMarkdown()
 
 definePageMeta({
-  layout: 'default'
+  layout: 'default',
+  middleware: 'auth'
 })
 
 const route = useRoute()
 const router = useRouter()
 
-// Auth state
-const { authChecked, showPasswordInput, password, authError, checkAuth, handleLogin } = useAuth()
 const project = ref(null)
 
 // Parse slug: first segment is projectId, rest is filePath
@@ -84,8 +83,6 @@ const contextMenu = ref({
   y: 0,
   item: null as any
 })
-const fileContent = ref('')
-const loading = ref(false)
 const markdownMode = ref('render')
 const markdownRef = ref(null)
 const contentRef = ref(null)
@@ -97,7 +94,6 @@ const commentPositionsVersion = ref(0)
 const selectedLineNumber = ref(1)
 const currentCommentIndex = ref(0)
 const mobileTab = ref<'files' | 'comments' | null>(null)
-const lastLoadedPath = ref<string>('') // Track last loaded path to prevent duplicates
 const breadcrumbBar = ref(null) // Ref for breadcrumb bar to check scrollbar-gutter
 
 // Find line number from DOM
@@ -143,6 +139,17 @@ const isMarkdown = computed(() => {
   return ext === 'md' || ext === 'markdown'
 })
 
+const isImage = computed(() => {
+  const ext = selectedFile.value?.name?.split('.').pop()?.toLowerCase()
+  return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(ext || '')
+})
+
+const imageUrl = computed(() => {
+  if (!isImage.value || !selectedFile.value?.path) return ''
+  const branch = selectedBranch.value || 'main'
+  return `/api/projects/${projectId.value}/raw?path=${encodeURIComponent(selectedFile.value.path)}&branch=${branch}`
+})
+
 const filePathSegments = computed(() => {
   return selectedFile.value?.path?.split('/').filter(Boolean) || []
 })
@@ -151,6 +158,31 @@ const fileExtension = computed(() => {
   const ext = selectedFile.value?.name?.split('.').pop()?.toLowerCase()
   return ext || 'text'
 })
+
+// Fetch file content using useFetch with computed URL
+const { data: fileData, pending: loading, error: fileError, refresh: refreshFile } = await useFetch(
+  () => {
+    if (!hasFile.value || !filePath.value || isImage.value) return null
+    const branch = selectedBranch.value || 'main'
+    return `/api/projects/${projectId.value}/file?path=${encodeURIComponent(filePath.value)}&branch=${branch}`
+  },
+  {
+    key: computed(() => `file-${projectId.value}-${filePath.value}-${selectedBranch.value || 'main'}`),
+    server: true,
+    lazy: false,
+    immediate: true
+  }
+)
+
+// Extract file content from response
+const fileContent = computed(() => fileData.value?.content || '')
+
+// Load comments when file changes
+watch([projectId, filePath], async () => {
+  if (hasFile.value && filePath.value) {
+    await loadComments(projectId.value, filePath.value)
+  }
+}, { immediate: true })
 
 const getHighlightLanguage = (ext: string): string => {
   const langMap: Record<string, string> = {
@@ -374,85 +406,13 @@ const getCommentTop = (comment: any): number => {
   return commentPositions.value[comment.id] ?? 0
 }
 
-// Load project and file
+// Load project and tree
 onMounted(async () => {
-  await checkAuth()
-  if (!showPasswordInput.value) {
-    await loadProject()
-    await loadTree(projectId.value)
-    if (filePath.value) {
-      await loadFileFromPath(filePath.value)
-    }
-  }
-})
-
-// Watch for auth completion
-watch([authChecked, showPasswordInput], async () => {
-  if (authChecked.value && !showPasswordInput.value) {
-    await loadProject()
-    await loadTree(projectId.value)
-    if (filePath.value) {
-      await loadFileFromPath(filePath.value)
-    }
-  }
-})
-
-// Watch for route changes
-watch(slug, async (newSlug, oldSlug) => {
-  const newProjectId = newSlug[0]
-  const newFilePath = newSlug.slice(1).join('/')
-  const oldProjectId = oldSlug?.[0]
-  const oldFilePath = oldSlug?.slice(1).join('/')
-  
-  // Sync branch from URL query
+  console.log('[onMounted] Component mounted, loading project and tree...')
+  await loadProject()
+  await loadTree(projectId.value)
   syncBranchFromUrl()
-  
-  if (newProjectId !== oldProjectId) {
-    await loadProject()
-    await loadTree(projectId.value)
-  }
-  
-  if (newFilePath !== oldFilePath && newFilePath) {
-    await loadFileFromPath(newFilePath)
-  }
-})
-
-// Watch for branch changes and update URL + reload file
-watch(selectedBranch, async (newBranch, oldBranch) => {
-  console.log('[Branch Watch] Triggered:', { 
-    newBranch, 
-    oldBranch, 
-    selectedFile: selectedFile.value?.path, 
-    filePath: filePath.value,
-    authChecked: authChecked.value,
-    showPasswordInput: showPasswordInput.value,
-    condition: newBranch && authChecked.value && !showPasswordInput.value && newBranch !== oldBranch
-  })
-  
-  if (newBranch && authChecked.value && !showPasswordInput.value && newBranch !== oldBranch) {
-    console.log('[Branch Watch] Condition passed, updating URL and reloading file')
-    // Update URL query parameter
-    const query = { ...route.query }
-    if (newBranch === 'main' || !newBranch) {
-      delete query.branch
-    } else {
-      query.branch = newBranch
-    }
-    router.replace({ query })
-    
-    // Reload current file if a file is selected
-    if (selectedFile.value?.path) {
-      console.log('[Branch Watch] About to call loadFile for:', selectedFile.value.path)
-      await loadFile(selectedFile.value)
-      console.log('[Branch Watch] loadFile completed')
-    } else if (filePath.value) {
-      // If selectedFile not set but we have filePath from URL, reload that
-      console.log('[Branch Watch] Reloading from filePath:', filePath.value, 'with branch:', newBranch)
-      await loadFileFromPath(filePath.value)
-    } else {
-      console.log('[Branch Watch] No file to reload')
-    }
-  }
+  console.log('[onMounted] Initial load complete')
 })
 
 async function loadProject() {
@@ -463,72 +423,11 @@ async function loadProject() {
   }
 }
 
-async function onLogin() {
-  const success = await handleLogin()
-  if (success) {
-    await loadProject()
-    await loadTree(projectId.value)
-    if (filePath.value) {
-      await loadFileFromPath(filePath.value)
-    }
-  }
-}
-
-async function loadFileFromPath(path: string) {
-  const item = {
-    name: path.split('/').pop() || '',
-    path: path,
-    type: 'file' as const,
-    depth: 0
-  }
-  await loadFile(item)
-}
-
-async function loadFile(item: { path: string; name: string; type: string }) {
-  console.log('[loadFile] Called with:', { path: item.path, type: item.type })
-  if (item.type !== 'file') {
-    console.log('[loadFile] Early return - not a file')
-    return
-  }
-  
-  // Prevent duplicate loads of the same file
-  if (lastLoadedPath.value === item.path && fileContent.value) {
-    console.log('[loadFile] Skipping duplicate load of:', item.path)
-    return
-  }
-  
-  loading.value = true
-  selectFile(item as any)
-  lastLoadedPath.value = item.path
-  
-  console.log('[loadFile] Loading file:', item.path, 'with branch:', selectedBranch.value)
-  
-  try {
-    const response = await $fetch(`/api/projects/${projectId.value}/file`, {
-      query: { path: item.path, branch: selectedBranch.value }
-    })
-    console.log('[loadFile] Response received, content length:', response.content?.length)
-    fileContent.value = response.content || ''
-    await loadComments(projectId.value, item.path)
-  } catch (e: any) {
-    console.error('Failed to load file:', e)
-    // If file not found (404), redirect to project root
-    if (e.statusCode === 404 || e.status === 404) {
-      console.log('[loadFile] File not found, redirecting to project root')
-      const query = selectedBranch.value && selectedBranch.value !== 'main'
-        ? { branch: selectedBranch.value }
-        : {}
-      router.push({ path: `/project/${projectId.value}`, query })
-    }
-  } finally {
-    loading.value = false
-    await nextTick()
-    updateContentHeight()
-  }
-}
-
 function handleSelectFile(item: { path: string; name: string; type: string }) {
   if (item.type === 'file') {
+    // Update selectedFile state
+    selectFile(item as any)
+    
     const currentBranch = getCurrentBranch()
     const query = currentBranch && currentBranch !== 'main' 
       ? { branch: currentBranch } 
@@ -611,8 +510,7 @@ async function handleSaveComment() {
 const syncing = ref(false)
 
 async function handleRefresh() {
-  if (!selectedFile.value?.path) return
-  await loadFile(selectedFile.value)
+  await refreshFile()
 }
 
 async function handleSync() {
@@ -828,45 +726,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Loading State -->
-  <div v-if="!authChecked" class="min-h-screen flex items-center justify-center bg-gray-50">
-    <div class="text-gray-500">Loading...</div>
-  </div>
-  
-  <!-- Password Input Modal -->
-  <div v-else-if="showPasswordInput" class="min-h-screen flex items-center justify-center bg-gray-50">
-    <div class="max-w-md w-full mx-4">
-      <div class="bg-white rounded-lg shadow-md p-8">
-        <h1 class="text-2xl font-bold text-gray-900 mb-2">ClawDocu</h1>
-        <p class="text-gray-600 mb-6">Enter password to view this file</p>
-        
-        <form @submit.prevent="onLogin" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input 
-              v-model="password"
-              type="password"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-              placeholder="Enter admin password"
-              autofocus
-            />
-          </div>
-          
-          <p v-if="authError" class="text-sm text-red-600">{{ authError }}</p>
-          
-          <button 
-            type="submit"
-            class="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Continue
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Main Content (when authenticated) -->
-  <div v-else class="h-full flex">
+  <!-- Main Content -->
+  <div class="h-full flex">
     <!-- File Tree Sidebar (desktop only) -->
     <div class="hidden md:block shrink-0 h-full">
       <FileTree 
@@ -993,6 +854,16 @@ onUnmounted(() => {
             <div v-else-if="!hasFile" class="text-gray-400 text-center py-16">
               <Icon name="i-lucide-file-text" class="w-16 h-16 mx-auto mb-4 opacity-50" />
               <p>Select a file from the tree to view its contents</p>
+            </div>
+            
+            <!-- Image View -->
+            <div v-else-if="isImage" class="flex items-center justify-center p-8">
+              <img 
+                :src="imageUrl" 
+                :alt="selectedFile?.name || 'Image'"
+                class="max-w-full max-h-[80vh] object-contain rounded shadow-lg"
+                @error="(e) => console.error('Image load error:', e)"
+              />
             </div>
             
             <!-- Markdown Rendered -->

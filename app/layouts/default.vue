@@ -7,9 +7,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="h-screen flex flex-col bg-gray-50">
+  <div class="h-screen flex flex-col bg-gray-50 overflow-hidden">
     <AppHeader />
-    <div class="flex-1 min-h-0">
+    <div class="flex-1 min-h-0 overflow-hidden">
       <slot />
     </div>
   </div>

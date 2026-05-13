@@ -41,7 +41,7 @@ export const useAuth = () => {
 
   async function logout() {
     await $fetch('/api/auth/logout', { method: 'POST' })
-    navigateTo('/login')
+    window.location.href = '/'
   }
 
   return {

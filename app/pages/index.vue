@@ -13,9 +13,11 @@ const configured = ref(null)
 onMounted(async () => {
   try {
     const data = await $fetch('/api/auth/status')
+    console.log('[index onMounted] Auth status:', data)
     configured.value = data.configured
     if (data.loggedIn) {
-      navigateTo('/dashboard')
+      console.log('[index onMounted] Already logged in, redirecting to dashboard')
+      window.location.href = '/dashboard'
     }
   } catch (e) {
     console.error('Failed to check auth status:', e)
@@ -23,15 +25,19 @@ onMounted(async () => {
 })
 
 async function login() {
+  console.log('[login] Called with password:', form.password)
   loading.value = true
   
   try {
-    await $fetch('/api/auth/login', {
+    const result = await $fetch('/api/auth/login', {
       method: 'POST',
       body: { password: form.password }
     })
-    navigateTo('/dashboard')
+    console.log('[login] Success:', result)
+    // Full page reload to dashboard
+    window.location.href = '/dashboard'
   } catch (e) {
+    console.error('[login] Error:', e)
     alert(e.data?.message || 'Login failed')
   } finally {
     loading.value = false

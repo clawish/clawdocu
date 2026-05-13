@@ -53,7 +53,7 @@ export const useFileTree = () => {
       syncBranchFromUrl()
       branch = selectedBranch.value || undefined // Don't default to 'main' yet
     }
-    
+
     // Only show loading state on initial load, not on refreshes
     if (treeData.value.length === 0) {
       loading.value = true
@@ -63,13 +63,13 @@ export const useFileTree = () => {
       if (branch) {
         query.branch = branch
       }
-      
+
       const response = await $fetch(`/api/projects/${projectId}/tree`, {
         query
       })
       treeData.value = response.tree || []
       branches.value = response.branches || ['main']
-      
+
       // Set selectedBranch if not already set
       if (!selectedBranch.value) {
         if (response.defaultBranch) {
@@ -80,7 +80,7 @@ export const useFileTree = () => {
           selectedBranch.value = 'main'
         }
       }
-      
+
       // Load comment counts
       await loadCommentCounts(projectId)
     } catch (e) {
@@ -144,10 +144,24 @@ export const useFileTree = () => {
     }
   }
 
-  // Change branch
+  // Change branch and update URL
   const changeBranch = async (projectId: string, branch: string) => {
     console.log('[changeBranch] Called:', { projectId, branch, currentBranch: selectedBranch.value })
     selectedBranch.value = branch
+    
+    // Update URL query parameter directly
+    if (import.meta.client) {
+      const route = useRoute()
+      const router = useRouter()
+      const query = { ...route.query }
+      if (branch === 'main' || !branch) {
+        delete query.branch
+      } else {
+        query.branch = branch
+      }
+      router.replace({ query })
+    }
+    
     await loadTree(projectId, branch)
   }
 
