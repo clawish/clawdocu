@@ -279,12 +279,32 @@ function getPositionByLineNumber(lineNumber: number): number | null {
   if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value) {
     // Find element with data-source-line attribute (from markdown-it-inject-linenumbers plugin)
     // Note: plugin uses 0-indexed lines, so we need to subtract 1
-    const el = markdownRef.value.querySelector(`[data-source-line="${lineNumber - 1}"]`)
+    
+    // First try exact line
+    let el = markdownRef.value.querySelector(`[data-source-line="${lineNumber - 1}"]`)
     if (el) {
       const rect = el.getBoundingClientRect()
       return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
     }
-    // Line doesn't exist (deleted)
+    
+    // Line doesn't exist, try to find next existing line
+    const allLineElements = markdownRef.value.querySelectorAll('[data-source-line]')
+    if (allLineElements.length > 0) {
+      // Find the nearest line at or after the target line
+      for (const lineEl of allLineElements) {
+        const lineNum = parseInt(lineEl.getAttribute('data-source-line') || '0', 10) + 1
+        if (lineNum >= lineNumber) {
+          const rect = lineEl.getBoundingClientRect()
+          return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
+        }
+      }
+      // No line found after target, use the last line
+      const lastEl = allLineElements[allLineElements.length - 1]
+      const rect = lastEl.getBoundingClientRect()
+      return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
+    }
+    
+    // No line elements at all
     return null
   }
 
@@ -296,7 +316,12 @@ function getPositionByLineNumber(lineNumber: number): number | null {
       const rect = lineEl.getBoundingClientRect()
       return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
     }
-    // Line doesn't exist (deleted)
+    // Line doesn't exist, use last available line
+    if (lineSpans.length > 0) {
+      const lastLineEl = lineSpans[lineSpans.length - 1]
+      const rect = lastLineEl.getBoundingClientRect()
+      return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
+    }
     return null
   }
   return null
