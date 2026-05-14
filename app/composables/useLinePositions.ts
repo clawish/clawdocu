@@ -1,47 +1,67 @@
-import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
+import { computed, onUnmounted } from 'vue'
 
 /**
  * Composable for tracking line positions in file content.
  * 
+ * Uses Nuxt's useState for shared state across components.
+ * 
+ * Features:
  * - Stores positions of all lines with data-source-line attributes
  * - Interpolates positions for empty/missing lines
  * - Auto-updates on resize
  * - Provides fast O(1) lookups
  */
 
+// Default values
+const defaultLinePositionsState = {
+  // Map of line number -> element (stored as array for serialization)
+  lineElementsMap: new Map<number, HTMLElement>(),
+  // Sorted list of line numbers (computed from map)
+  sortedLineNumbers: [] as number[],
+  // Container refs
+  containerEl: null as HTMLElement | null,
+  scrollContainerEl: null as HTMLElement | null,
+  // Resize observer
+  resizeObserver: null as ResizeObserver | null,
+  // Version for reactivity
+  version: 0
+}
+
+// Shared state (singleton)
+export const useLinePositionsState = () => useState<typeof defaultLinePositionsState>('linePositionsState', () => ({ 
+  ...defaultLinePositionsState,
+  lineElementsMap: new Map<number, HTMLElement>()
+}))
+
+/**
+ * Composable for line position operations
+ */
 export function useLinePositions() {
-  // Map of line number -> element
-  const lineElements = ref<Map<number, HTMLElement>>(new Map())
+  const state = useLinePositionsState()
   
-  // Sorted list of line numbers (for interpolation)
+  // Computed sorted line numbers
   const sortedLineNumbers = computed(() => {
-    return Array.from(lineElements.value.keys()).sort((a, b) => a - b)
+    return Array.from(state.value.lineElementsMap.keys()).sort((a, b) => a - b)
   })
-  
-  // Container refs (set by component)
-  const containerRef = ref<HTMLElement | null>(null)
-  const scrollContainerRef = ref<HTMLElement | null>(null)
-  
-  // Resize observer for auto-updates
-  let resizeObserver: ResizeObserver | null = null
   
   /**
    * Scan DOM and build line element map
    */
   function scanLineElements() {
-    if (!containerRef.value) return
+    if (!state.value.containerEl) return
     
-    const elements = containerRef.value.querySelectorAll('[data-source-line]')
+    const elements = state.value.containerEl.querySelectorAll('[data-source-line]')
     const newMap = new Map<number, HTMLElement>()
     
     elements.forEach((el) => {
-      const lineNum = parseInt((el as HTMLElement).getAttribute('data-source-line') || '0', 10) + 1 // Convert 0-indexed to 1-indexed
+      const lineNum = parseInt((el as HTMLElement).getAttribute('data-source-line') || '0', 10) + 1
       if (lineNum > 0) {
         newMap.set(lineNum, el as HTMLElement)
       }
     })
     
-    lineElements.value = newMap
+    state.value.lineElementsMap = newMap
+    state.value.version++
   }
   
   /**
@@ -51,15 +71,15 @@ export function useLinePositions() {
    * - If no lines: return null
    */
   function getLinePosition(lineNumber: number): number | null {
-    if (!scrollContainerRef.value) return null
+    if (!state.value.scrollContainerEl) return null
     
-    const containerRect = scrollContainerRef.value.getBoundingClientRect()
+    const containerRect = state.value.scrollContainerEl.getBoundingClientRect()
     
     // Exact match
-    const el = lineElements.value.get(lineNumber)
+    const el = state.value.lineElementsMap.get(lineNumber)
     if (el) {
       const rect = el.getBoundingClientRect()
-      return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
+      return rect.top - containerRect.top + state.value.scrollContainerEl.scrollTop
     }
     
     // Line doesn't exist - interpolate
@@ -82,15 +102,15 @@ export function useLinePositions() {
     // Interpolate position
     if (prevLine > 0 && nextLine > 0) {
       // Line is between two existing lines - interpolate
-      const prevEl = lineElements.value.get(prevLine)
-      const nextEl = lineElements.value.get(nextLine)
+      const prevEl = state.value.lineElementsMap.get(prevLine)
+      const nextEl = state.value.lineElementsMap.get(nextLine)
       
       if (prevEl && nextEl) {
         const prevRect = prevEl.getBoundingClientRect()
         const nextRect = nextEl.getBoundingClientRect()
         
-        const prevTop = prevRect.top - containerRect.top + scrollContainerRef.value.scrollTop
-        const nextTop = nextRect.top - containerRect.top + scrollContainerRef.value.scrollTop
+        const prevTop = prevRect.top - containerRect.top + state.value.scrollContainerEl.scrollTop
+        const nextTop = nextRect.top - containerRect.top + state.value.scrollContainerEl.scrollTop
         
         // Linear interpolation based on line number ratio
         const ratio = (lineNumber - prevLine) / (nextLine - prevLine)
@@ -98,23 +118,21 @@ export function useLinePositions() {
       }
     } else if (prevLine > 0) {
       // Line is after all existing lines - extrapolate from last line
-      const prevEl = lineElements.value.get(prevLine)
+      const prevEl = state.value.lineElementsMap.get(prevLine)
       if (prevEl) {
         const prevRect = prevEl.getBoundingClientRect()
-        const prevTop = prevRect.top - containerRect.top + scrollContainerRef.value.scrollTop
+        const prevTop = prevRect.top - containerRect.top + state.value.scrollContainerEl.scrollTop
         
-        // Assume standard line height (24px)
         const avgLineHeight = getAverageLineHeight()
         return prevTop + (lineNumber - prevLine) * avgLineHeight
       }
     } else if (nextLine > 0) {
       // Line is before all existing lines - extrapolate from first line
-      const nextEl = lineElements.value.get(nextLine)
+      const nextEl = state.value.lineElementsMap.get(nextLine)
       if (nextEl) {
         const nextRect = nextEl.getBoundingClientRect()
-        const nextTop = nextRect.top - containerRect.top + scrollContainerRef.value.scrollTop
+        const nextTop = nextRect.top - containerRect.top + state.value.scrollContainerEl.scrollTop
         
-        // Assume standard line height (24px)
         const avgLineHeight = getAverageLineHeight()
         return nextTop - (nextLine - lineNumber) * avgLineHeight
       }
@@ -135,8 +153,8 @@ export function useLinePositions() {
     let count = 0
     
     for (let i = 0; i < sorted.length - 1 && count < 5; i++) {
-      const currentEl = lineElements.value.get(sorted[i])
-      const nextEl = lineElements.value.get(sorted[i + 1])
+      const currentEl = state.value.lineElementsMap.get(sorted[i])
+      const nextEl = state.value.lineElementsMap.get(sorted[i + 1])
       
       if (currentEl && nextEl) {
         const currentRect = currentEl.getBoundingClientRect()
@@ -167,7 +185,6 @@ export function useLinePositions() {
       }
     }
     
-    // Return last line
     return sorted[sorted.length - 1] || null
   }
   
@@ -183,22 +200,26 @@ export function useLinePositions() {
    * Setup resize observer for auto-updates
    */
   function setupResizeObserver() {
-    if (!containerRef.value) return
+    if (!state.value.containerEl) return
     
-    resizeObserver = new ResizeObserver(() => {
-      // Debounce - only scan if size actually changed
+    // Cleanup existing observer
+    if (state.value.resizeObserver) {
+      state.value.resizeObserver.disconnect()
+    }
+    
+    state.value.resizeObserver = new ResizeObserver(() => {
       scanLineElements()
     })
     
-    resizeObserver.observe(containerRef.value)
+    state.value.resizeObserver.observe(state.value.containerEl)
   }
   
   /**
    * Initialize the composable
    */
   async function initialize(container: HTMLElement, scrollContainer: HTMLElement) {
-    containerRef.value = container
-    scrollContainerRef.value = scrollContainer
+    state.value.containerEl = container
+    state.value.scrollContainerEl = scrollContainer
     
     await nextTick()
     scanLineElements()
@@ -209,13 +230,14 @@ export function useLinePositions() {
    * Cleanup
    */
   function cleanup() {
-    if (resizeObserver) {
-      resizeObserver.disconnect()
-      resizeObserver = null
+    if (state.value.resizeObserver) {
+      state.value.resizeObserver.disconnect()
+      state.value.resizeObserver = null
     }
-    lineElements.value.clear()
-    containerRef.value = null
-    scrollContainerRef.value = null
+    state.value.lineElementsMap.clear()
+    state.value.containerEl = null
+    state.value.scrollContainerEl = null
+    state.value.version = 0
   }
   
   // Auto-cleanup on unmount
@@ -223,8 +245,9 @@ export function useLinePositions() {
   
   return {
     // State
-    lineElements,
+    lineElements: computed(() => state.value.lineElementsMap),
     sortedLineNumbers,
+    version: computed(() => state.value.version),
     
     // Methods
     initialize,
@@ -234,9 +257,5 @@ export function useLinePositions() {
     getTotalLines,
     getAverageLineHeight,
     cleanup,
-    
-    // Refs to set
-    containerRef,
-    scrollContainerRef,
   }
 }
