@@ -41,7 +41,7 @@ useHead(() => ({
 
 // Use composables
 const {
-  lineElements,
+  linePositions,
   sortedLineNumbers,
   updateCount,
   initialize: initializeLinePositions,

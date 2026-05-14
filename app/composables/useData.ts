@@ -40,8 +40,7 @@ export const defaultUIState = {
 
 // Line positions state
 export const defaultLinePositionsState = {
-  lineElementsMap: new Map<number, HTMLElement>(),
-  sortedLineNumbers: [] as number[],
+  linePositionsMap: new Map<number, number>(),  // lineNumber -> scrollTopPosition
   containerEl: null as HTMLElement | null,
   scrollContainerEl: null as HTMLElement | null,
   resizeObserver: null as ResizeObserver | null,
