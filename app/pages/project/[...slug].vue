@@ -81,6 +81,7 @@ const {
   incrementCommentCount,
   decrementCommentCount,
   toggleFolder,
+  expandToPath,
   selectFile,
   changeBranch,
   getFileIcon,
@@ -405,6 +406,15 @@ onMounted(async () => {
   await loadProject()
   await loadTree(projectId.value)
   syncBranchFromUrl()
+  
+  // Set selectedFile and expand tree from URL path if file is specified
+  if (filePath.value) {
+    const fileName = filePath.value.split('/').pop() || ''
+    selectFile({ path: filePath.value, name: fileName, type: 'file' })
+    expandToPath(filePath.value)
+    console.log('[onMounted] Selected file from URL:', filePath.value)
+  }
+  
   console.log('[onMounted] Initial load complete')
   
   // Initialize line positions after DOM is ready

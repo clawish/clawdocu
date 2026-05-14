@@ -137,6 +137,20 @@ export const useFileTree = () => {
     expandedPaths.value = new Set(expandedPaths.value)
   }
 
+  // Expand tree to a specific path (for direct links)
+  const expandToPath = (filePath: string) => {
+    // Get all parent directories and expand them
+    const parts = filePath.split('/')
+    for (let i = 1; i < parts.length; i++) {
+      const parentPath = parts.slice(0, i).join('/')
+      if (!expandedPaths.value.has(parentPath)) {
+        expandedPaths.value.add(parentPath)
+      }
+    }
+    // Trigger reactivity
+    expandedPaths.value = new Set(expandedPaths.value)
+  }
+
   // Select a file
   const selectFile = (item: TreeItem) => {
     if (item.type === 'file') {
@@ -371,6 +385,7 @@ export const useFileTree = () => {
     incrementCommentCount,
     decrementCommentCount,
     toggleFolder,
+    expandToPath,
     selectFile,
     changeBranch,
     getFileIcon,
