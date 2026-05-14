@@ -23,16 +23,21 @@ export const useComments = () => {
   // Load comments for a file
   const loadComments = async (projectId: string, filePath: string) => {
     currentFilePath.value = filePath
+    console.log('[useComments] loadComments: projectId', projectId, 'filePath', filePath)
     try {
       const response = await $fetch(`/api/projects/${projectId}/comments`, {
         query: { path: filePath }
       })
       comments.value = response.comments || []
+      console.log('[useComments] loadComments: loaded', comments.value.length, 'comments')
+      comments.value.forEach(c => {
+        console.log('[useComments] comment', c.id, 'line:', c.lineNumber, 'text:', c.text?.substring(0, 30))
+      })
       allComments.value[filePath] = [...comments.value]
       // Keep original in sync — loaded data reflects what's on GitHub
       originalAllComments.value[filePath] = [...comments.value]
     } catch (e) {
-      console.error('Failed to load comments:', e)
+      console.error('[useComments] Failed to load comments:', e)
       comments.value = []
     }
   }
