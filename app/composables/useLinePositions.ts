@@ -28,7 +28,7 @@ export function useLinePositions() {
   
   /**
    * Scan DOM and build line position map
-   * Stores { lineNumber: scrollTopPosition } for each line
+   * Pre-computes positions for ALL lines (including empty ones via interpolation)
    */
   function scanLineElements() {
     if (!state.value.containerEl || !state.value.scrollContainerEl) {
@@ -41,86 +41,132 @@ export function useLinePositions() {
     
     const containerRect = state.value.scrollContainerEl.getBoundingClientRect()
     const scrollTop = state.value.scrollContainerEl.scrollTop
-    const newMap = new Map<number, number>()
+    const actualLines = new Map<number, number>()
     
     elements.forEach((el) => {
       const lineNum = parseInt((el as HTMLElement).getAttribute('data-source-line') || '0', 10) + 1
       if (lineNum > 0) {
         const elRect = el.getBoundingClientRect()
         const topPosition = elRect.top - containerRect.top + scrollTop
-        newMap.set(lineNum, topPosition)
+        actualLines.set(lineNum, topPosition)
       }
     })
     
-    const sortedLines = Array.from(newMap.keys()).sort((a, b) => a - b)
-    console.log('[useLinePositions] scanLineElements: map size', newMap.size)
-    console.log('[useLinePositions] scanLineElements: all lines:', sortedLines.join(', '))
-    console.log('[useLinePositions] scanLineElements: positions:', sortedLines.map(l => `${l}:${Math.round(newMap.get(l)!)}`).join(', '))
+    const sortedActual = Array.from(actualLines.keys()).sort((a, b) => a - b)
+    console.log('[useLinePositions] scanLineElements: actual lines:', sortedActual.length, sortedActual.join(', '))
     
-    state.value.linePositionsMap = newMap
+    // Get total lines (last line number + some buffer for trailing empty lines)
+    const lastActualLine = sortedActual.length > 0 ? sortedActual[sortedActual.length - 1] : 0
+    const totalLines = lastActualLine + 10 // Buffer for trailing empty lines
+    
+    // Pre-compute positions for ALL lines (interpolate missing ones)
+    const allLines = new Map<number, number>()
+    
+    for (let lineNum = 1; lineNum <= totalLines; lineNum++) {
+      if (actualLines.has(lineNum)) {
+        // Actual line - use exact position
+        allLines.set(lineNum, actualLines.get(lineNum)!)
+      } else {
+        // Empty line - interpolate
+        const interpolatedPos = interpolatePosition(lineNum, actualLines, sortedActual)
+        allLines.set(lineNum, interpolatedPos)
+      }
+    }
+    
+    console.log('[useLinePositions] scanLineElements: total lines:', allLines.size)
+    console.log('[useLinePositions] scanLineElements: sample positions:', 
+      'line 1:', Math.round(allLines.get(1)!),
+      'line 56:', Math.round(allLines.get(56)!),
+      'line 80:', Math.round(allLines.get(80)!),
+      'line 99:', Math.round(allLines.get(99)!))
+    
+    state.value.linePositionsMap = allLines
     state.value.updateCount++
   }
   
   /**
-   * Get position for a line number
-   * - If line exists: return its position
-   * - If line doesn't exist: interpolate between nearest lines
-   * - If no lines: return null
+   * Interpolate position for a missing line
    */
-  function getLinePosition(lineNumber: number): number | null {
-    // Exact match
-    const position = state.value.linePositionsMap.get(lineNumber)
-    if (position !== undefined) {
-      console.log('[useLinePositions] getLinePosition: line', lineNumber, 'found at', position)
-      return position
-    }
-    
-    // Line doesn't exist - interpolate
-    const sorted = sortedLineNumbers.value
-    console.log('[useLinePositions] getLinePosition: line', lineNumber, 'not found, interpolating. Total lines:', sorted.length)
-    if (sorted.length === 0) return null
+  function interpolatePosition(
+    lineNum: number,
+    actualLines: Map<number, number>,
+    sortedActual: number[]
+  ): number {
+    if (sortedActual.length === 0) return 0
     
     // Find surrounding lines
     let prevLine = 0
-    let prevPosition = 0
+    let prevPos = 0
     let nextLine = 0
-    let nextPosition = 0
+    let nextPos = 0
     
-    for (const line of sorted) {
-      const linePos = state.value.linePositionsMap.get(line)!
-      if (line < lineNumber) {
+    for (const line of sortedActual) {
+      const pos = actualLines.get(line)!
+      if (line < lineNum) {
         prevLine = line
-        prevPosition = linePos
-      } else if (line > lineNumber) {
+        prevPos = pos
+      } else if (line > lineNum) {
         nextLine = line
-        nextPosition = linePos
+        nextPos = pos
         break
       }
     }
     
-    console.log('[useLinePositions] getLinePosition: line', lineNumber, 'prevLine:', prevLine, 'nextLine:', nextLine)
-    
-    // Interpolate position
+    // Interpolate
     if (prevLine > 0 && nextLine > 0) {
-      // Line is between two existing lines - interpolate
-      const ratio = (lineNumber - prevLine) / (nextLine - prevLine)
-      const interpolatedPosition = prevPosition + ratio * (nextPosition - prevPosition)
-      console.log('[useLinePositions] getLinePosition: line', lineNumber, 'interpolated between', prevLine, '@', prevPosition, 'and', nextLine, '@', nextPosition, '=>', interpolatedPosition)
-      return interpolatedPosition
+      // Between two actual lines
+      const ratio = (lineNum - prevLine) / (nextLine - prevLine)
+      return prevPos + ratio * (nextPos - prevPos)
     } else if (prevLine > 0) {
-      // Line is after all existing lines - extrapolate from last line
-      const avgLineHeight = getAverageLineHeight()
-      const extrapolatedPosition = prevPosition + (lineNumber - prevLine) * avgLineHeight
-      console.log('[useLinePositions] getLinePosition: line', lineNumber, 'extrapolated from', prevLine, '@', prevPosition, 'avgHeight:', avgLineHeight, '=>', extrapolatedPosition)
-      return extrapolatedPosition
+      // After all actual lines - extrapolate
+      const avgHeight = getAverageLineHeightFromMap(actualLines, sortedActual)
+      return prevPos + (lineNum - prevLine) * avgHeight
     } else if (nextLine > 0) {
-      // Line is before all existing lines - extrapolate from first line
-      const avgLineHeight = getAverageLineHeight()
-      const extrapolatedPosition = nextPosition - (nextLine - lineNumber) * avgLineHeight
-      console.log('[useLinePositions] getLinePosition: line', lineNumber, 'extrapolated before', nextLine, '@', nextPosition, 'avgHeight:', avgLineHeight, '=>', extrapolatedPosition)
-      return extrapolatedPosition
+      // Before all actual lines - extrapolate
+      const avgHeight = getAverageLineHeightFromMap(actualLines, sortedActual)
+      return nextPos - (nextLine - lineNum) * avgHeight
     }
     
+    return 0
+  }
+  
+  /**
+   * Calculate average line height from actual lines map
+   */
+  function getAverageLineHeightFromMap(
+    actualLines: Map<number, number>,
+    sortedActual: number[]
+  ): number {
+    if (sortedActual.length < 2) return 24
+    
+    let totalHeight = 0
+    let count = 0
+    
+    for (let i = 0; i < sortedActual.length - 1 && count < 5; i++) {
+      const currentPos = actualLines.get(sortedActual[i])!
+      const nextPos = actualLines.get(sortedActual[i + 1])!
+      const lineDiff = sortedActual[i + 1] - sortedActual[i]
+      
+      if (lineDiff > 0) {
+        totalHeight += (nextPos - currentPos) / lineDiff
+        count++
+      }
+    }
+    
+    return count > 0 ? totalHeight / count : 24
+  }
+  
+  /**
+   * Get position for a line number
+   * All lines are pre-computed, so this is a simple O(1) lookup
+   */
+  function getLinePosition(lineNumber: number): number | null {
+    const position = state.value.linePositionsMap.get(lineNumber)
+    if (position !== undefined) {
+      console.log('[useLinePositions] getLinePosition: line', lineNumber, '=>', Math.round(position))
+      return position
+    }
+    console.log('[useLinePositions] getLinePosition: line', lineNumber, 'not found in map')
     return null
   }
   
