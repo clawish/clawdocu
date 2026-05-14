@@ -42,6 +42,8 @@ useHead(() => ({
 // Use composables
 const {
   lineElements,
+  sortedLineNumbers,
+  version,
   initialize: initializeLinePositions,
   scanLineElements,
   getLinePosition,
@@ -333,76 +335,45 @@ function updateCommentBoxHeight(commentId: string, height: number) {
 // Pre-calculated comment positions to prevent overlap
 const commentPositions = computed(() => {
   void commentPositionsVersion.value
+  void version.value // Depend on line positions version
   
   const positions: Record<string, number> = {}
   const minCommentHeight = 150 // Minimum height for a comment box
   const margin = 40 // Margin between comments
   
-  // Get content height for orphaned comments positioning
-  const contentHeight = contentRef.value?.scrollHeight || lines.value.length * 24
+  // Track placed comments and their bottom positions
+  const placedComments: { id: string; top: number; bottom: number }[] = []
   
-  // Separate comments into valid and orphaned
-  const validComments: { comment: any; baseTop: number; height: number }[] = []
-  const orphanedComments: { comment: any; height: number }[] = []
-  
+  // Position all comments (interpolation handles missing lines)
   for (const comment of sortedComments.value) {
     const baseTop = getPositionByLineNumber(comment.lineNumber || 1)
     const height = commentBoxHeights.value[comment.id] || minCommentHeight
     
     if (baseTop !== null) {
-      // Line exists - add to valid comments
-      validComments.push({ comment, baseTop, height })
-    } else {
-      // Line doesn't exist (deleted) - add to orphaned
-      orphanedComments.push({ comment, height })
-    }
-  }
-  
-  // Track placed comments and their bottom positions
-  const placedComments: { id: string; top: number; bottom: number }[] = []
-  
-  // Position valid comments first (at their line positions)
-  for (const { comment, baseTop, height } of validComments) {
-    let adjustedTop = baseTop
-    for (const placed of placedComments) {
-      if (adjustedTop < placed.bottom + margin) {
-        adjustedTop = Math.max(adjustedTop, placed.bottom + margin)
+      // Adjust position to prevent overlap
+      let adjustedTop = baseTop
+      for (const placed of placedComments) {
+        if (adjustedTop < placed.bottom + margin) {
+          adjustedTop = Math.max(adjustedTop, placed.bottom + margin)
+        }
       }
+      
+      positions[comment.id] = adjustedTop
+      placedComments.push({
+        id: comment.id,
+        top: adjustedTop,
+        bottom: adjustedTop + height
+      })
     }
-    
-    positions[comment.id] = adjustedTop
-    placedComments.push({
-      id: comment.id,
-      top: adjustedTop,
-      bottom: adjustedTop + height
-    })
-  }
-  
-  // Position orphaned comments at the bottom in order
-  let orphanedTop = contentHeight + margin // Start after content
-  for (const { comment, height } of orphanedComments) {
-    // Check collision with other orphaned comments
-    for (const placed of placedComments) {
-      if (orphanedTop < placed.bottom + margin) {
-        orphanedTop = Math.max(orphanedTop, placed.bottom + margin)
-      }
-    }
-    
-    positions[comment.id] = orphanedTop
-    placedComments.push({
-      id: comment.id,
-      top: orphanedTop,
-      bottom: orphanedTop + height
-    })
-    orphanedTop += height + margin // Move down for next orphaned comment
   }
   
   return positions
 })
 
-// Track orphaned comment IDs
+// Track orphaned comment IDs (only if file is completely empty)
 const orphanedCommentIds = computed(() => {
   void commentPositionsVersion.value
+  void version.value
   
   const ids = new Set<string>()
   
