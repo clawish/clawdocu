@@ -23,18 +23,27 @@ export const useComments = () => {
   // Load comments for a file
   const loadComments = async (projectId: string, filePath: string) => {
     currentFilePath.value = filePath
-    try {
-      const response = await $fetch(`/api/projects/${projectId}/comments`, {
-        query: { path: filePath }
-      })
-      comments.value = response.comments || []
-      comments.value.forEach(c => {
-      })
-      allComments.value[filePath] = [...comments.value]
-      // Keep original in sync — loaded data reflects what's on GitHub
-      originalAllComments.value[filePath] = [...comments.value]
-    } catch (e) {
-      comments.value = []
+    
+    // Check if we have unsaved comments for this file
+    const hasUnsavedComments = allComments.value[filePath] && 
+      JSON.stringify(allComments.value[filePath]) !== JSON.stringify(originalAllComments.value[filePath] || [])
+    
+    if (hasUnsavedComments) {
+      // Use existing unsaved comments from memory
+      comments.value = [...allComments.value[filePath]]
+    } else {
+      // Load from API
+      try {
+        const response = await $fetch(`/api/projects/${projectId}/comments`, {
+          query: { path: filePath }
+        })
+        comments.value = response.comments || []
+        allComments.value[filePath] = [...comments.value]
+        // Keep original in sync — loaded data reflects what's on GitHub
+        originalAllComments.value[filePath] = [...comments.value]
+      } catch (e) {
+        comments.value = []
+      }
     }
   }
 
