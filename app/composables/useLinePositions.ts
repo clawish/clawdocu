@@ -28,9 +28,14 @@ export function useLinePositions() {
    * Scan DOM and build line element map
    */
   function scanLineElements() {
-    if (!state.value.containerEl) return
+    if (!state.value.containerEl) {
+      console.log('[useLinePositions] scanLineElements: no containerEl')
+      return
+    }
     
     const elements = state.value.containerEl.querySelectorAll('[data-source-line]')
+    console.log('[useLinePositions] scanLineElements: found', elements.length, 'elements with data-source-line')
+    
     const newMap = new Map<number, HTMLElement>()
     
     elements.forEach((el) => {
@@ -39,6 +44,8 @@ export function useLinePositions() {
         newMap.set(lineNum, el as HTMLElement)
       }
     })
+    
+    console.log('[useLinePositions] scanLineElements: map size', newMap.size, 'first 5 lines:', Array.from(newMap.keys()).slice(0, 5))
     
     state.value.lineElementsMap = newMap
     state.value.updateCount++  // Trigger reactivity (Map replacement doesn't auto-trigger)
@@ -51,7 +58,10 @@ export function useLinePositions() {
    * - If no lines: return null
    */
   function getLinePosition(lineNumber: number): number | null {
-    if (!state.value.scrollContainerEl) return null
+    if (!state.value.scrollContainerEl) {
+      console.log('[useLinePositions] getLinePosition: no scrollContainerEl')
+      return null
+    }
     
     const containerRect = state.value.scrollContainerEl.getBoundingClientRect()
     
@@ -59,11 +69,14 @@ export function useLinePositions() {
     const el = state.value.lineElementsMap.get(lineNumber)
     if (el) {
       const rect = el.getBoundingClientRect()
-      return rect.top - containerRect.top + state.value.scrollContainerEl.scrollTop
+      const top = rect.top - containerRect.top + state.value.scrollContainerEl.scrollTop
+      console.log('[useLinePositions] getLinePosition: line', lineNumber, 'found at top', top)
+      return top
     }
     
     // Line doesn't exist - interpolate
     const sorted = sortedLineNumbers.value
+    console.log('[useLinePositions] getLinePosition: line', lineNumber, 'not found, interpolating. Total lines:', sorted.length)
     if (sorted.length === 0) return null
     
     // Find surrounding lines
@@ -198,12 +211,14 @@ export function useLinePositions() {
    * Initialize the composable
    */
   async function initialize(container: HTMLElement, scrollContainer: HTMLElement) {
+    console.log('[useLinePositions] initialize: container', container, 'scrollContainer', scrollContainer)
     state.value.containerEl = container
     state.value.scrollContainerEl = scrollContainer
     
     await nextTick()
     scanLineElements()
     setupResizeObserver()
+    console.log('[useLinePositions] initialize: done, updateCount', state.value.updateCount)
   }
   
   /**

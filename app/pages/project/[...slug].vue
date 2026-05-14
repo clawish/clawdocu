@@ -201,6 +201,8 @@ watch([hasFile, fileContent, markdownMode], async () => {
   await nextTick()
   await nextTick() // Double nextTick to ensure DOM is rendered
   
+  console.log('[watch] hasFile:', hasFile.value, 'isMarkdown:', isMarkdown.value, 'markdownMode:', markdownMode.value, 'markdownRef:', !!markdownRef.value, 'scrollContainerRef:', !!scrollContainerRef.value)
+  
   if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value && scrollContainerRef.value) {
     initializeLinePositions(markdownRef.value, scrollContainerRef.value)
   }
@@ -336,6 +338,8 @@ function updateCommentBoxHeight(commentId: string, height: number) {
 const commentPositions = computed(() => {
   void commentPositionsVersion.value
   void updateCount.value  // Recalculate when line positions update
+  
+  console.log('[commentPositions] computing, sortedComments:', sortedComments.value.length, 'updateCount:', updateCount.value)
   
   const positions: Record<string, number> = {}
   const minCommentHeight = 150 // Minimum height for a comment box
