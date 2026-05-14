@@ -41,6 +41,16 @@ useHead(() => ({
 
 // Use composables
 const {
+  lineElements,
+  initialize: initializeLinePositions,
+  scanLineElements,
+  getLinePosition,
+  getNearestLine,
+  getTotalLines,
+  getAverageLineHeight,
+} = useLinePositions()
+
+const {
   comments,
   showCommentBox,
   selectedText,
@@ -182,6 +192,16 @@ watch([projectId, filePath], async () => {
   if (hasFile.value && filePath.value) {
     await loadComments(projectId.value, filePath.value)
   }
+})
+
+// Initialize line positions when file content loads
+watch([hasFile, fileContent, markdownMode], async () => {
+  await nextTick()
+  await nextTick() // Double nextTick to ensure DOM is rendered
+  
+  if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value && scrollContainerRef.value) {
+    initializeLinePositions(markdownRef.value, scrollContainerRef.value)
+  }
 }, { immediate: true })
 
 const getHighlightLanguage = (ext: string): string => {
@@ -272,43 +292,17 @@ const commentedLines = computed(() => {
 })
 
 function getPositionByLineNumber(lineNumber: number): number | null {
+  // Use the line positions composable for markdown rendered mode
+  if (isMarkdown.value && markdownMode.value === 'render') {
+    return getLinePosition(lineNumber)
+  }
+  
+  // For code view, use traditional approach
   if (!contentRef.value || !scrollContainerRef.value) return null
   
   const containerRect = scrollContainerRef.value.getBoundingClientRect()
-
-  if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value) {
-    // Find element with data-source-line attribute (from markdown-it-inject-linenumbers plugin)
-    // Note: plugin uses 0-indexed lines, so we need to subtract 1
-    
-    // First try exact line
-    let el = markdownRef.value.querySelector(`[data-source-line="${lineNumber - 1}"]`)
-    if (el) {
-      const rect = el.getBoundingClientRect()
-      return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
-    }
-    
-    // Line doesn't exist, try to find next existing line
-    const allLineElements = markdownRef.value.querySelectorAll('[data-source-line]')
-    if (allLineElements.length > 0) {
-      // Find the nearest line at or after the target line
-      for (const lineEl of allLineElements) {
-        const lineNum = parseInt(lineEl.getAttribute('data-source-line') || '0', 10) + 1
-        if (lineNum >= lineNumber) {
-          const rect = lineEl.getBoundingClientRect()
-          return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
-        }
-      }
-      // No line found after target, use the last line
-      const lastEl = allLineElements[allLineElements.length - 1]
-      const rect = lastEl.getBoundingClientRect()
-      return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
-    }
-    
-    // No line elements at all
-    return null
-  }
-
   const codeBlock = contentRef.value.querySelector('pre code')
+  
   if (codeBlock) {
     const lineSpans = codeBlock.querySelectorAll('.block')
     if (lineSpans.length >= lineNumber && lineNumber > 0) {
@@ -322,7 +316,6 @@ function getPositionByLineNumber(lineNumber: number): number | null {
       const rect = lastLineEl.getBoundingClientRect()
       return rect.top - containerRect.top + scrollContainerRef.value.scrollTop
     }
-    return null
   }
   return null
 }
@@ -516,6 +509,10 @@ function copySelectedText() {
 
 watch(markdownMode, async () => {
   await nextTick()
+  // Re-scan line positions when switching modes
+  if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value && scrollContainerRef.value) {
+    initializeLinePositions(markdownRef.value, scrollContainerRef.value)
+  }
   commentPositionsVersion.value++
   updateContentHeight()
 })
