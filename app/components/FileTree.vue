@@ -95,13 +95,13 @@ const handleSelectFile = (item: TreeItem) => {
                 : getFileIcon(item.name)" 
               class="w-4 h-4"
             />
-            <span class="truncate">{{ item.name }}</span>
+            <span class="truncate flex-1">{{ item.name }}</span>
           </button>
           
-          <!-- Comment count badge -->
+          <!-- Comment count badge - fixed width to align right -->
           <span 
             v-if="getVisibleCommentCount(item)" 
-            class="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
+            class="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center shrink-0"
           >
             {{ getVisibleCommentCount(item) }}
           </span>

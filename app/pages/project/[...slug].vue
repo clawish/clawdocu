@@ -141,9 +141,6 @@ onMounted(() => {
   // Check scrollbar-gutter on breadcrumb bar
   if (breadcrumbBar.value) {
     const styles = window.getComputedStyle(breadcrumbBar.value)
-    console.log('[BreadcrumbBar] scrollbar-gutter:', styles.scrollbarGutter)
-    console.log('[BreadcrumbBar] overflow:', styles.overflow)
-    console.log('[BreadcrumbBar] width:', breadcrumbBar.value.offsetWidth)
   }
 })
 
@@ -202,7 +199,6 @@ watch([hasFile, fileContent, markdownMode], async () => {
   await nextTick()
   await nextTick() // Double nextTick to ensure DOM is rendered
   
-  console.log('[watch] hasFile:', hasFile.value, 'isMarkdown:', isMarkdown.value, 'markdownMode:', markdownMode.value, 'markdownRef:', !!markdownRef.value, 'scrollContainerRef:', !!scrollContainerRef.value)
   
   if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value && scrollContainerRef.value) {
     initializeLinePositions(markdownRef.value, scrollContainerRef.value)
@@ -340,11 +336,9 @@ const commentPositions = computed(() => {
   void commentPositionsVersion.value
   void updateCount.value  // Recalculate when line positions update
   
-  console.log('[commentPositions] computing, sortedComments:', sortedComments.value.length, 'updateCount:', updateCount.value)
   
   // Log each comment's line number
   sortedComments.value.forEach(c => {
-    console.log('[commentPositions] comment', c.id, 'line:', c.lineNumber, 'selectedText:', c.selectedText?.substring(0, 30))
   })
   
   const positions: Record<string, number> = {}
@@ -359,7 +353,6 @@ const commentPositions = computed(() => {
     const baseTop = getPositionByLineNumber(comment.lineNumber || 1)
     const height = commentBoxHeights.value[comment.id] || minCommentHeight
     
-    console.log('[commentPositions] comment', comment.id, 'line', comment.lineNumber, 'baseTop:', baseTop)
     
     if (baseTop !== null) {
       // Adjust position to prevent overlap
@@ -367,11 +360,9 @@ const commentPositions = computed(() => {
       for (const placed of placedComments) {
         if (adjustedTop < placed.bottom + margin) {
           adjustedTop = Math.max(adjustedTop, placed.bottom + margin)
-          console.log('[commentPositions] collision detected! comment', comment.id, 'moved from', baseTop, 'to', adjustedTop)
         }
       }
       
-      console.log('[commentPositions] comment', comment.id, 'final position:', adjustedTop)
       
       positions[comment.id] = adjustedTop
       placedComments.push({
@@ -412,7 +403,6 @@ const getCommentTop = (comment: any): number => {
 
 // Load project and tree
 onMounted(async () => {
-  console.log('[onMounted] Component mounted, loading project and tree...')
   await loadProject()
   await loadTree(projectId.value)
   syncBranchFromUrl()
@@ -422,19 +412,16 @@ onMounted(async () => {
     const fileName = filePath.value.split('/').pop() || ''
     selectFile({ path: filePath.value, name: fileName, type: 'file' })
     expandToPath(filePath.value)
-    console.log('[onMounted] Selected file from URL:', filePath.value)
     
     // Load comments for the file
     await loadComments(projectId.value, filePath.value)
   }
   
-  console.log('[onMounted] Initial load complete')
   
   // Initialize line positions after DOM is ready
   await nextTick()
   await nextTick()
   if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value && scrollContainerRef.value) {
-    console.log('[onMounted] Initializing line positions...')
     initializeLinePositions(markdownRef.value, scrollContainerRef.value)
   }
 })
@@ -443,7 +430,6 @@ async function loadProject() {
   try {
     project.value = await $fetch(`/api/projects/${projectId.value}`)
   } catch (e) {
-    console.error('Failed to load project:', e)
   }
 }
 
@@ -692,7 +678,6 @@ async function renameItem() {
       await loadTree(projectId.value, selectedBranch.value)
     }
   } catch (error: any) {
-    console.error('Rename failed:', error)
     alert(error.data?.message || 'Failed to rename')
   } finally {
     loading.value = false // Hide loading
@@ -736,7 +721,6 @@ async function deleteItem() {
       }
     }
   } catch (error: any) {
-    console.error('Delete failed:', error)
     alert(error.data?.message || 'Failed to delete')
   } finally {
     loading.value = false // Hide loading
@@ -890,7 +874,6 @@ onUnmounted(() => {
                 :src="imageUrl" 
                 :alt="selectedFile?.name || 'Image'"
                 class="max-w-full max-h-[80vh] object-contain rounded shadow-lg"
-                @error="(e) => console.error('Image load error:', e)"
               />
             </div>
             

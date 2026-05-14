@@ -32,12 +32,10 @@ export function useLinePositions() {
    */
   function scanLineElements() {
     if (!state.value.containerEl || !state.value.scrollContainerEl) {
-      console.log('[useLinePositions] scanLineElements: no container refs')
       return
     }
     
     const elements = state.value.containerEl.querySelectorAll('[data-source-line]')
-    console.log('[useLinePositions] scanLineElements: found', elements.length, 'elements with data-source-line')
     
     const containerRect = state.value.scrollContainerEl.getBoundingClientRect()
     const scrollTop = state.value.scrollContainerEl.scrollTop
@@ -53,11 +51,6 @@ export function useLinePositions() {
     })
     
     const sortedActual = Array.from(actualLines.keys()).sort((a, b) => a - b)
-    console.log('[useLinePositions] scanLineElements: actual lines:', sortedActual.length, sortedActual.join(', '))
-    
-    // Show actual line positions
-    console.log('[useLinePositions] scanLineElements: actual positions:', 
-      sortedActual.map(l => `${l}:${Math.round(actualLines.get(l)!)}`).join(', '))
     
     // Get total lines (last line number + some buffer for trailing empty lines)
     const lastActualLine = sortedActual.length > 0 ? sortedActual[sortedActual.length - 1] : 0
@@ -76,13 +69,6 @@ export function useLinePositions() {
         allLines.set(lineNum, interpolatedPos)
       }
     }
-    
-    console.log('[useLinePositions] scanLineElements: total lines:', allLines.size)
-    console.log('[useLinePositions] scanLineElements: sample positions:', 
-      'line 1:', Math.round(allLines.get(1)!),
-      'line 56:', Math.round(allLines.get(56)!),
-      'line 80:', Math.round(allLines.get(80)!),
-      'line 99:', Math.round(allLines.get(99)!))
     
     state.value.linePositionsMap = allLines
     state.value.updateCount++
@@ -171,38 +157,7 @@ export function useLinePositions() {
    */
   function getLinePosition(lineNumber: number): number | null {
     const position = state.value.linePositionsMap.get(lineNumber)
-    if (position !== undefined) {
-      console.log('[useLinePositions] getLinePosition: line', lineNumber, '=>', Math.round(position))
-      return position
-    }
-    console.log('[useLinePositions] getLinePosition: line', lineNumber, 'not found in map')
-    return null
-  }
-  
-  /**
-   * Calculate average line height from existing lines
-   */
-  function getAverageLineHeight(): number {
-    const sorted = sortedLineNumbers.value
-    if (sorted.length < 2) return 24 // Default
-    
-    // Sample a few consecutive lines to get average height
-    let totalHeight = 0
-    let count = 0
-    
-    for (let i = 0; i < sorted.length - 1 && count < 5; i++) {
-      const currentPos = state.value.linePositionsMap.get(sorted[i])!
-      const nextPos = state.value.linePositionsMap.get(sorted[i + 1])!
-      const lineDiff = sorted[i + 1] - sorted[i]
-      
-      if (lineDiff > 0) {
-        const height = (nextPos - currentPos) / lineDiff
-        totalHeight += height
-        count++
-      }
-    }
-    
-    return count > 0 ? totalHeight / count : 24
+    return position !== undefined ? position : null
   }
   
   /**
@@ -251,14 +206,12 @@ export function useLinePositions() {
    * Initialize the composable
    */
   async function initialize(container: HTMLElement, scrollContainer: HTMLElement) {
-    console.log('[useLinePositions] initialize: container', container, 'scrollContainer', scrollContainer)
     state.value.containerEl = container
     state.value.scrollContainerEl = scrollContainer
     
     await nextTick()
     scanLineElements()
     setupResizeObserver()
-    console.log('[useLinePositions] initialize: done, updateCount', state.value.updateCount)
   }
   
   /**
@@ -290,7 +243,7 @@ export function useLinePositions() {
     getLinePosition,
     getNearestLine,
     getTotalLines,
-    getAverageLineHeight,
+    getAverageLineHeight: getAverageLineHeightFromMap,
     cleanup,
   }
 }
