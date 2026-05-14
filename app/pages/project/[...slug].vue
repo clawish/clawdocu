@@ -206,7 +206,7 @@ watch([hasFile, fileContent, markdownMode], async () => {
   if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value && scrollContainerRef.value) {
     initializeLinePositions(markdownRef.value, scrollContainerRef.value)
   }
-}, { immediate: true })
+})
 
 const getHighlightLanguage = (ext: string): string => {
   const langMap: Record<string, string> = {
@@ -406,6 +406,14 @@ onMounted(async () => {
   await loadTree(projectId.value)
   syncBranchFromUrl()
   console.log('[onMounted] Initial load complete')
+  
+  // Initialize line positions after DOM is ready
+  await nextTick()
+  await nextTick()
+  if (isMarkdown.value && markdownMode.value === 'render' && markdownRef.value && scrollContainerRef.value) {
+    console.log('[onMounted] Initializing line positions...')
+    initializeLinePositions(markdownRef.value, scrollContainerRef.value)
+  }
 })
 
 async function loadProject() {
