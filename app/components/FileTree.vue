@@ -74,13 +74,13 @@ const handleSelectFile = (item: TreeItem) => {
     </div>
     
     <!-- Scrollable file list -->
-    <div class="overflow-y-auto flex-1 px-4 pb-4" style="scrollbar-gutter: stable">
+    <div class="overflow-y-auto flex-1 px-4 pb-4 relative" style="scrollbar-gutter: stable">
       <div v-if="loading" class="text-gray-400 text-sm p-2">Loading...</div>
       <div v-else class="space-y-0.5">
         <div
           v-for="item in flatTree"
           :key="item.path"
-          class="flex items-center gap-1"
+          class="flex items-center gap-1 relative"
           :style="{ paddingLeft: (item.depth * 12 + 8) + 'px' }"
         >
           <button
@@ -95,13 +95,13 @@ const handleSelectFile = (item: TreeItem) => {
                 : getFileIcon(item.name)" 
               class="w-4 h-4"
             />
-            <span class="truncate flex-1">{{ item.name }}</span>
+            <span class="truncate">{{ item.name }}</span>
           </button>
           
-          <!-- Comment count badge - fixed width to align right -->
+          <!-- Comment count badge - absolute position to always align right -->
           <span 
             v-if="getVisibleCommentCount(item)" 
-            class="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center shrink-0"
+            class="absolute right-0 text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
           >
             {{ getVisibleCommentCount(item) }}
           </span>
