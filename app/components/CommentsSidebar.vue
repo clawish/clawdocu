@@ -26,9 +26,9 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="w-80 shrink-0 grow-0 overflow-hidden border-l border-gray-200 bg-gray-50">
+  <div class="w-80 shrink-0 grow-0 overflow-y-auto border-l border-gray-200 bg-gray-50" style="height: calc(100vh - 56px);">
     <!-- Comments positioned by line number -->
-    <div class="relative z-0" :style="{ minHeight: contentHeight ? contentHeight + 'px' : (linesCount * 24 + 100) + 'px' }">
+    <div class="relative z-0" :style="{ minHeight: Math.max(contentHeight || 0, linesCount * 24 + 100, 600) + 200 + 'px' }">
       <!-- Comment Input Box -->
       <CommentInput 
         v-if="showCommentBox"
@@ -47,7 +47,7 @@ const emit = defineEmits<{
         :active="idx === currentCommentIndex"
         :top="getCommentTop(comment)"
         :orphaned="isOrphaned?.(comment)"
-        @delete="emit('delete', $event)"
+        @delete="emit('delete', $event)""
         @click="emit('clickComment', comment)"
         @heightUpdate="(id, height) => emit('heightUpdate', id, height)"
       />
