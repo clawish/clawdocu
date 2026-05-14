@@ -68,6 +68,7 @@ export const useComments = () => {
 
   // Close comment box
   const closeCommentBox = (resetPosition = false) => {
+    console.log('[useComments] closeCommentBox called, was:', showCommentBox.value)
     showCommentBox.value = false
     selectedText.value = ''
     commentText.value = ''

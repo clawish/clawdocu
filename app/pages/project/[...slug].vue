@@ -191,6 +191,7 @@ const fileContent = computed(() => fileData.value?.content || '')
 watch([projectId, filePath], async () => {
   if (hasFile.value && filePath.value) {
     // Close any open comment box when switching files
+    console.log('[watch] Closing comment box, switching to file:', filePath.value)
     closeCommentBox()
     await loadComments(projectId.value, filePath.value)
   }
