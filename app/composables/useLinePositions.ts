@@ -126,9 +126,14 @@ export function useLinePositions() {
       const avgHeight = getAverageLineHeightFromMap(actualLines, sortedActual)
       return prevPos + (lineNum - prevLine) * avgHeight
     } else if (nextLine > 0) {
-      // Before all actual lines - extrapolate
-      const avgHeight = getAverageLineHeightFromMap(actualLines, sortedActual)
-      return nextPos - (nextLine - lineNum) * avgHeight
+      // Before all actual lines - start from 0
+      // Line 1 should be at position 0 (top of content)
+      if (lineNum === 1) {
+        return 0
+      }
+      // Other lines before first actual line - interpolate from 0 to first actual
+      const ratio = (lineNum - 1) / (nextLine - 1)
+      return ratio * nextPos
     }
     
     return 0
