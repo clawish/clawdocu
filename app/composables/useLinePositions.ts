@@ -1,9 +1,10 @@
 import { computed, onUnmounted } from 'vue'
+import { useLinePositionsState } from './useData'
 
 /**
- * Composable for tracking line positions in file content.
+ * Composable for line position operations.
  * 
- * Uses Nuxt's useState for shared state across components.
+ * State is defined in useData.ts following the project pattern.
  * 
  * Features:
  * - Stores positions of all lines with data-source-line attributes
@@ -11,27 +12,6 @@ import { computed, onUnmounted } from 'vue'
  * - Auto-updates on resize
  * - Provides fast O(1) lookups
  */
-
-// Default values
-const defaultLinePositionsState = {
-  // Map of line number -> element (stored as array for serialization)
-  lineElementsMap: new Map<number, HTMLElement>(),
-  // Sorted list of line numbers (computed from map)
-  sortedLineNumbers: [] as number[],
-  // Container refs
-  containerEl: null as HTMLElement | null,
-  scrollContainerEl: null as HTMLElement | null,
-  // Resize observer
-  resizeObserver: null as ResizeObserver | null,
-  // Version for reactivity
-  version: 0
-}
-
-// Shared state (singleton)
-export const useLinePositionsState = () => useState<typeof defaultLinePositionsState>('linePositionsState', () => ({ 
-  ...defaultLinePositionsState,
-  lineElementsMap: new Map<number, HTMLElement>()
-}))
 
 /**
  * Composable for line position operations

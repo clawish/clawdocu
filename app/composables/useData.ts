@@ -38,6 +38,16 @@ export const defaultUIState = {
   windowWidth: typeof window !== 'undefined' ? window.innerWidth : 1024
 }
 
+// Line positions state
+export const defaultLinePositionsState = {
+  lineElementsMap: new Map<number, HTMLElement>(),
+  sortedLineNumbers: [] as number[],
+  containerEl: null as HTMLElement | null,
+  scrollContainerEl: null as HTMLElement | null,
+  resizeObserver: null as ResizeObserver | null,
+  version: 0
+}
+
 // ============================================
 // File Tree State Composables
 // ============================================
@@ -64,6 +74,15 @@ export const useContextMenuState = () => useState<typeof defaultContextMenuState
 export const useUIState = () => useState<typeof defaultUIState>('uiState', () => ({ ...defaultUIState }))
 
 // ============================================
+// Line Positions State Composables
+// ============================================
+
+export const useLinePositionsState = () => useState<typeof defaultLinePositionsState>('linePositionsState', () => ({ 
+  ...defaultLinePositionsState,
+  lineElementsMap: new Map<number, HTMLElement>()
+}))
+
+// ============================================
 // Exports
 // ============================================
 
@@ -77,7 +96,8 @@ export const stateComposables = {
   useTreeLoadingState,
   useProjectState,
   useContextMenuState,
-  useUIState
+  useUIState,
+  useLinePositionsState
 }
 
 export const defaultValues = {
@@ -89,5 +109,6 @@ export const defaultValues = {
   defaultCommentCounts,
   defaultProjectState,
   defaultContextMenuState,
-  defaultUIState
+  defaultUIState,
+  defaultLinePositionsState
 }
