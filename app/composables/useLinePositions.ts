@@ -76,7 +76,7 @@ export function useLinePositions() {
     
     // Line doesn't exist - interpolate
     const sorted = sortedLineNumbers.value
-    console.log('[useLinePositions] getLinePosition: line', lineNumber, 'not found, interpolating. Total lines:', sorted.length)
+    console.log('[useLinePositions] getLinePosition: line', lineNumber, 'not found, interpolating. Total lines:', sorted.length, 'first 10:', sorted.slice(0, 10))
     if (sorted.length === 0) return null
     
     // Find surrounding lines
@@ -91,6 +91,8 @@ export function useLinePositions() {
         break
       }
     }
+    
+    console.log('[useLinePositions] getLinePosition: line', lineNumber, 'prevLine:', prevLine, 'nextLine:', nextLine)
     
     // Interpolate position
     if (prevLine > 0 && nextLine > 0) {
@@ -107,7 +109,9 @@ export function useLinePositions() {
         
         // Linear interpolation based on line number ratio
         const ratio = (lineNumber - prevLine) / (nextLine - prevLine)
-        return prevTop + ratio * (nextTop - prevTop)
+        const interpolatedTop = prevTop + ratio * (nextTop - prevTop)
+        console.log('[useLinePositions] getLinePosition: line', lineNumber, 'interpolated between', prevLine, 'and', nextLine, 'top:', interpolatedTop)
+        return interpolatedTop
       }
     } else if (prevLine > 0) {
       // Line is after all existing lines - extrapolate from last line
