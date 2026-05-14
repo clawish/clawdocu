@@ -45,7 +45,9 @@ export function useLinePositions() {
       }
     })
     
-    console.log('[useLinePositions] scanLineElements: map size', newMap.size, 'first 5 lines:', Array.from(newMap.keys()).slice(0, 5))
+    const sortedLines = Array.from(newMap.keys()).sort((a, b) => a - b)
+    console.log('[useLinePositions] scanLineElements: map size', newMap.size)
+    console.log('[useLinePositions] scanLineElements: all lines:', sortedLines.join(', '))
     
     state.value.lineElementsMap = newMap
     state.value.updateCount++  // Trigger reactivity (Map replacement doesn't auto-trigger)
