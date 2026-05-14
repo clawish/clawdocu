@@ -367,8 +367,11 @@ const commentPositions = computed(() => {
       for (const placed of placedComments) {
         if (adjustedTop < placed.bottom + margin) {
           adjustedTop = Math.max(adjustedTop, placed.bottom + margin)
+          console.log('[commentPositions] collision detected! comment', comment.id, 'moved from', baseTop, 'to', adjustedTop)
         }
       }
+      
+      console.log('[commentPositions] comment', comment.id, 'final position:', adjustedTop)
       
       positions[comment.id] = adjustedTop
       placedComments.push({
