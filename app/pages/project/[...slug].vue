@@ -43,7 +43,7 @@ useHead(() => ({
 const {
   lineElements,
   sortedLineNumbers,
-  revision,
+  updateCount,
   initialize: initializeLinePositions,
   scanLineElements,
   getLinePosition,
@@ -335,7 +335,7 @@ function updateCommentBoxHeight(commentId: string, height: number) {
 // Pre-calculated comment positions to prevent overlap
 const commentPositions = computed(() => {
   void commentPositionsVersion.value
-  void revision.value  // Recalculate when line positions are rescanned
+  void updateCount.value  // Recalculate when line positions update
   
   const positions: Record<string, number> = {}
   const minCommentHeight = 150 // Minimum height for a comment box
@@ -373,7 +373,7 @@ const commentPositions = computed(() => {
 // Track orphaned comment IDs (only if file is completely empty)
 const orphanedCommentIds = computed(() => {
   void commentPositionsVersion.value
-  void revision.value
+  void updateCount.value
   
   const ids = new Set<string>()
   

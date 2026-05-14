@@ -41,7 +41,7 @@ export function useLinePositions() {
     })
     
     state.value.lineElementsMap = newMap
-    state.value.revision++  // Signal that positions changed
+    state.value.updateCount++  // Trigger reactivity (Map replacement doesn't auto-trigger)
   }
   
   /**
@@ -217,7 +217,7 @@ export function useLinePositions() {
     state.value.lineElementsMap.clear()
     state.value.containerEl = null
     state.value.scrollContainerEl = null
-    state.value.revision = 0
+    state.value.updateCount = 0
   }
   
   // Auto-cleanup on unmount
@@ -227,7 +227,7 @@ export function useLinePositions() {
     // State
     lineElements: computed(() => state.value.lineElementsMap),
     sortedLineNumbers,
-    revision: computed(() => state.value.revision),  // Reactivity trigger for DOM changes
+    updateCount: computed(() => state.value.updateCount),
     
     // Methods
     initialize,

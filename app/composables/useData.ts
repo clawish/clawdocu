@@ -45,7 +45,7 @@ export const defaultLinePositionsState = {
   containerEl: null as HTMLElement | null,
   scrollContainerEl: null as HTMLElement | null,
   resizeObserver: null as ResizeObserver | null,
-  revision: 0  // Increments when line positions are rescanned
+  updateCount: 0  // Counter for reactivity (Map replacement doesn't trigger Vue reactivity)
 }
 
 // ============================================
