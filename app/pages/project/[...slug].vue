@@ -438,6 +438,9 @@ async function loadProject() {
 
 function handleSelectFile(item: { path: string; name: string; type: string }) {
   if (item.type === 'file') {
+    // Close any open comment box when switching files
+    closeCommentBox()
+    
     // Update selectedFile state
     selectFile(item as any)
     
