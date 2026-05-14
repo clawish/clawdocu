@@ -45,7 +45,7 @@ export const defaultLinePositionsState = {
   containerEl: null as HTMLElement | null,
   scrollContainerEl: null as HTMLElement | null,
   resizeObserver: null as ResizeObserver | null,
-  version: 0
+  revision: 0  // Increments when line positions are rescanned
 }
 
 // ============================================
