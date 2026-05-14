@@ -420,6 +420,9 @@ onMounted(async () => {
     selectFile({ path: filePath.value, name: fileName, type: 'file' })
     expandToPath(filePath.value)
     console.log('[onMounted] Selected file from URL:', filePath.value)
+    
+    // Load comments for the file
+    await loadComments(projectId.value, filePath.value)
   }
   
   console.log('[onMounted] Initial load complete')
