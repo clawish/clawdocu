@@ -342,6 +342,11 @@ const commentPositions = computed(() => {
   
   console.log('[commentPositions] computing, sortedComments:', sortedComments.value.length, 'updateCount:', updateCount.value)
   
+  // Log each comment's line number
+  sortedComments.value.forEach(c => {
+    console.log('[commentPositions] comment', c.id, 'line:', c.lineNumber, 'selectedText:', c.selectedText?.substring(0, 30))
+  })
+  
   const positions: Record<string, number> = {}
   const minCommentHeight = 150 // Minimum height for a comment box
   const margin = 40 // Margin between comments
@@ -353,6 +358,8 @@ const commentPositions = computed(() => {
   for (const comment of sortedComments.value) {
     const baseTop = getPositionByLineNumber(comment.lineNumber || 1)
     const height = commentBoxHeights.value[comment.id] || minCommentHeight
+    
+    console.log('[commentPositions] comment', comment.id, 'line', comment.lineNumber, 'baseTop:', baseTop)
     
     if (baseTop !== null) {
       // Adjust position to prevent overlap

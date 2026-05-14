@@ -55,6 +55,10 @@ export function useLinePositions() {
     const sortedActual = Array.from(actualLines.keys()).sort((a, b) => a - b)
     console.log('[useLinePositions] scanLineElements: actual lines:', sortedActual.length, sortedActual.join(', '))
     
+    // Show actual line positions
+    console.log('[useLinePositions] scanLineElements: actual positions:', 
+      sortedActual.map(l => `${l}:${Math.round(actualLines.get(l)!)}`).join(', '))
+    
     // Get total lines (last line number + some buffer for trailing empty lines)
     const lastActualLine = sortedActual.length > 0 ? sortedActual[sortedActual.length - 1] : 0
     const totalLines = lastActualLine + 10 // Buffer for trailing empty lines
