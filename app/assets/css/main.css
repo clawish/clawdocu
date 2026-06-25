@@ -113,3 +113,27 @@
   font-size: 12px;
   line-height: 1;
 }
+
+/* HTML file preview — scope so embedded styles don't leak */
+.html-preview {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.html-preview img {
+  max-width: 100%;
+  height: auto;
+}
+
+.html-preview table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.html-preview th,
+.html-preview td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem;
+}

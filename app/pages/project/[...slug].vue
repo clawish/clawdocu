@@ -97,6 +97,7 @@ const contextMenu = ref({
   item: null as any
 })
 const markdownMode = ref('render')
+const htmlMode = ref('render')
 const markdownRef = ref(null)
 const contentRef = ref(null)
 const scrollContainerRef = ref(null)
@@ -147,6 +148,11 @@ onMounted(() => {
 const isMarkdown = computed(() => {
   const ext = selectedFile.value?.name?.split('.').pop()?.toLowerCase()
   return ext === 'md' || ext === 'markdown'
+})
+
+const isHtml = computed(() => {
+  const ext = selectedFile.value?.name?.split('.').pop()?.toLowerCase()
+  return ext === 'html' || ext === 'htm'
 })
 
 const isImage = computed(() => {
@@ -794,6 +800,22 @@ onUnmounted(() => {
               Raw
             </button>
           </div>
+          <div v-else-if="hasFile && isHtml" class="flex md:hidden items-center gap-1">
+            <button 
+              @click="htmlMode = 'render'"
+              class="px-2 py-1 text-xs rounded-lg transition-colors"
+              :class="htmlMode === 'render' ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-gray-100'"
+            >
+              View
+            </button>
+            <button 
+              @click="htmlMode = 'source'"
+              class="px-2 py-1 text-xs rounded-lg transition-colors"
+              :class="htmlMode === 'source' ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-gray-100'"
+            >
+              Raw
+            </button>
+          </div>
           
           <div class="hidden md:flex items-center gap-3">
             <button 
@@ -832,6 +854,22 @@ onUnmounted(() => {
                 @click="markdownMode = 'source'"
                 class="px-3 py-1 text-sm rounded-lg transition-colors"
                 :class="markdownMode === 'source' ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-gray-100'"
+              >
+                Raw
+              </button>
+            </div>
+            <div v-else-if="hasFile && isHtml" class="flex items-center gap-2">
+              <button 
+                @click="htmlMode = 'render'"
+                class="px-3 py-1 text-sm rounded-lg transition-colors"
+                :class="htmlMode === 'render' ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-gray-100'"
+              >
+                View
+              </button>
+              <button 
+                @click="htmlMode = 'source'"
+                class="px-3 py-1 text-sm rounded-lg transition-colors"
+                :class="htmlMode === 'source' ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-gray-100'"
               >
                 Raw
               </button>
@@ -889,6 +927,13 @@ onUnmounted(() => {
               ref="markdownRef"
               class="prose prose-sm max-w-none select-text"
               v-html="renderedMarkdown"
+            />
+            
+            <!-- HTML Rendered -->
+            <div 
+              v-else-if="isHtml && htmlMode === 'render'"
+              class="html-preview prose prose-sm max-w-none select-text"
+              v-html="fileContent"
             />
             
             <!-- Code View -->
