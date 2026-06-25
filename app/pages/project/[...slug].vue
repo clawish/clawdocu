@@ -99,6 +99,7 @@ const contextMenu = ref({
 const markdownMode = ref('render')
 const htmlMode = ref('render')
 const markdownRef = ref(null)
+const htmlPreviewRef = ref(null)
 const contentRef = ref(null)
 const scrollContainerRef = ref(null)
 const sidebarOpen = ref(true)
@@ -289,6 +290,16 @@ function updateContentHeight() {
   if (contentRef.value) {
     contentHeight.value = contentRef.value.scrollHeight
   }
+}
+
+function autoResizeHtmlPreview() {
+  if (!htmlPreviewRef.value) return
+  try {
+    const doc = htmlPreviewRef.value.contentDocument
+    if (doc && doc.body) {
+      htmlPreviewRef.value.style.height = doc.body.scrollHeight + 'px'
+    }
+  } catch {}
 }
 
 const commentedLines = computed(() => {
@@ -929,11 +940,14 @@ onUnmounted(() => {
               v-html="renderedMarkdown"
             />
             
-            <!-- HTML Rendered -->
-            <div 
+            <!-- HTML Rendered (sandboxed iframe) -->
+            <iframe
               v-else-if="isHtml && htmlMode === 'render'"
-              class="html-preview prose prose-sm max-w-none select-text"
-              v-html="fileContent"
+              ref="htmlPreviewRef"
+              :srcdoc="fileContent"
+              sandbox="allow-same-origin"
+              class="html-preview w-full border-0 rounded-lg"
+              @load="autoResizeHtmlPreview"
             />
             
             <!-- Code View -->
