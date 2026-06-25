@@ -96,14 +96,14 @@ const filteredRepos = computed(() => {
       <!-- Two-column layout -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- My Projects -->
-        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col max-h-[calc(100vh-12rem)]">
+          <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 shrink-0">
             <h2 class="font-medium text-gray-900">My Projects ({{ projects.length }})</h2>
           </div>
           <div v-if="projects.length === 0" class="p-8 text-center text-gray-500">
             No projects yet. Add a repository from the Available Repos panel.
           </div>
-          <div v-else class="divide-y divide-gray-200">
+          <div v-else class="divide-y divide-gray-200 overflow-y-auto">
             <div 
               v-for="project in projects" 
               :key="project.id"
@@ -137,8 +137,8 @@ const filteredRepos = computed(() => {
         </div>
 
         <!-- Available Repos -->
-        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col max-h-[calc(100vh-12rem)]">
+          <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 shrink-0">
             <h2 class="font-medium text-gray-900">Available Repos ({{ filteredRepos.length }})</h2>
           </div>
           <div v-if="loadingRepos" class="p-8 text-center text-gray-500">
@@ -147,7 +147,7 @@ const filteredRepos = computed(() => {
           <div v-else-if="filteredRepos.length === 0" class="p-8 text-center text-gray-500">
             {{ projects.length > 0 ? 'All repos are already added as projects.' : 'No repositories found. Make sure your GITHUB_TOKEN has access to repos.' }}
           </div>
-          <div v-else class="divide-y divide-gray-200">
+          <div v-else class="divide-y divide-gray-200 overflow-y-auto">
             <div 
               v-for="repo in filteredRepos" 
               :key="repo.fullName"
