@@ -34,7 +34,8 @@ export default defineEventHandler(async (event) => {
         lineNumber: c.lineNumber,
         selectedText: c.selectedText,
         text: c.text,
-        createdAt: c.createdAt
+        createdAt: c.createdAt,
+        ...(c.followups && c.followups.length > 0 ? { followups: c.followups } : {})
       }))
       
       files.push({

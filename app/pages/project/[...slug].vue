@@ -66,6 +66,7 @@ const {
   saveComment,
   deleteComment,
   editComment,
+  addFollowup,
   syncComments
 } = useComments()
 
@@ -589,6 +590,14 @@ function handleEditComment(commentId: string, newText: string) {
   editComment(commentId, newText)
 }
 
+function handleAddFollowup(commentId: string, body: string) {
+  addFollowup(commentId, body, 'user')
+  nextTick(() => {
+    commentPositionsVersion.value++
+    updateContentHeight()
+  })
+}
+
 function scrollToCommentLine(comment: any) {
   // Check if this comment is orphaned
   const isCommentOrphaned = orphanedCommentIds.value.has(comment.id)
@@ -919,6 +928,7 @@ onUnmounted(() => {
               @cancel="closeCommentBoxLocal"
               @delete="handleDeleteComment"
               @edit="handleEditComment"
+              @addFollowup="handleAddFollowup"
               @clickComment="handleClickComment"
               @heightUpdate="updateCommentBoxHeight"
             />
@@ -1029,6 +1039,15 @@ onUnmounted(() => {
                 <div class="text-xs text-gray-400 mb-1">Line {{ comment.lineNumber }}</div>
                 <div v-if="comment.selectedText" class="text-xs text-gray-500 mb-2 p-2 bg-white rounded italic">"{{ comment.selectedText }}"</div>
                 <div class="text-sm text-gray-700">{{ comment.text }}</div>
+                <!-- Followups in mobile -->
+                <div v-if="comment.followups && comment.followups.length > 0" class="mt-2 ml-2 border-l-2 border-gray-200 pl-2 space-y-1.5">
+                  <div v-for="f in comment.followups" :key="f.id">
+                    <div class="flex items-center gap-1 mb-0.5">
+                      <span class="text-xs px-1 py-0.5 rounded font-medium" :class="f.author === 'agent' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'">{{ f.author }}</span>
+                    </div>
+                    <p class="text-xs text-gray-600">{{ f.body }}</p>
+                  </div>
+                </div>
               </div>
             </div>
             
