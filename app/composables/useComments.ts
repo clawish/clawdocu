@@ -112,6 +112,17 @@ export const useComments = () => {
     return currentFilePath.value
   }
 
+  // Edit comment (local only, sync manually)
+  const editComment = (commentId: string, newText: string) => {
+    const updateInList = (list: Comment[]) =>
+      list.map(c => c.id === commentId ? { ...c, text: newText } : c)
+
+    comments.value = updateInList(comments.value)
+    if (currentFilePath.value) {
+      allComments.value[currentFilePath.value] = updateInList(allComments.value[currentFilePath.value] || [])
+    }
+  }
+
   // Sync comments to GitHub
   const syncComments = async (projectId: string) => {
     try {
@@ -160,6 +171,7 @@ export const useComments = () => {
     closeCommentBox,
     saveComment,
     deleteComment,
+    editComment,
     syncComments,
     setCurrentFileComments,
   }

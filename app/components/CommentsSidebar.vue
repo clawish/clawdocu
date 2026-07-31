@@ -20,6 +20,7 @@ const emit = defineEmits<{
   'save': []
   'cancel': []
   'delete': [id: string]
+  'edit': [id: string, text: string]
   'clickComment': [comment: Comment]
   'heightUpdate': [id: string, height: number]
 }>()
@@ -48,6 +49,7 @@ const emit = defineEmits<{
         :top="getCommentTop(comment)"
         :orphaned="isOrphaned?.(comment)"
         @delete="emit('delete', $event)"
+        @edit="(id, text) => emit('edit', id, text)"
         @click="emit('clickComment', comment)"
         @heightUpdate="(id, height) => emit('heightUpdate', id, height)"
       />
