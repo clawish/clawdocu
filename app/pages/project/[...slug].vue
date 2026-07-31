@@ -65,6 +65,7 @@ const {
   closeCommentBox,
   saveComment,
   deleteComment,
+  editComment,
   syncComments
 } = useComments()
 
@@ -584,6 +585,10 @@ async function handleDeleteComment(commentId: string) {
   }
 }
 
+function handleEditComment(commentId: string, newText: string) {
+  editComment(commentId, newText)
+}
+
 function scrollToCommentLine(comment: any) {
   // Check if this comment is orphaned
   const isCommentOrphaned = orphanedCommentIds.value.has(comment.id)
@@ -913,6 +918,7 @@ onUnmounted(() => {
               @save="handleSaveComment"
               @cancel="closeCommentBoxLocal"
               @delete="handleDeleteComment"
+              @edit="handleEditComment"
               @clickComment="handleClickComment"
               @heightUpdate="updateCommentBoxHeight"
             />
