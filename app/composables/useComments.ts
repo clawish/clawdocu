@@ -1,12 +1,20 @@
 // Comment state management composable
 import type { Ref } from 'vue'
 
+export interface Followup {
+  id: string
+  author: string
+  body: string
+  createdAt: string
+}
+
 export interface Comment {
   id: string
   lineNumber: number
   selectedText: string
   text: string
   createdAt: string
+  followups?: Followup[]
 }
 
 // Singleton state
@@ -112,6 +120,31 @@ export const useComments = () => {
     return currentFilePath.value
   }
 
+  // Add followup to a comment (local only, sync manually)
+  const addFollowup = (commentId: string, body: string, author: string = 'user') => {
+    if (!body.trim()) return
+    
+    const followup: Followup = {
+      id: Date.now().toString(),
+      author,
+      body: body.trim(),
+      createdAt: new Date().toISOString()
+    }
+
+    const addToList = (list: Comment[]) =>
+      list.map(c => {
+        if (c.id === commentId) {
+          return { ...c, followups: [...(c.followups || []), followup] }
+        }
+        return c
+      })
+
+    comments.value = addToList(comments.value)
+    if (currentFilePath.value) {
+      allComments.value[currentFilePath.value] = addToList(allComments.value[currentFilePath.value] || [])
+    }
+  }
+
   // Edit comment (local only, sync manually)
   const editComment = (commentId: string, newText: string) => {
     const updateInList = (list: Comment[]) =>
@@ -172,6 +205,7 @@ export const useComments = () => {
     saveComment,
     deleteComment,
     editComment,
+    addFollowup,
     syncComments,
     setCurrentFileComments,
   }
