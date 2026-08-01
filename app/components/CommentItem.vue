@@ -13,6 +13,7 @@ const emit = defineEmits<{
   click: [comment: Comment]
   heightUpdate: [id: string, height: number]
   edit: [id: string, text: string]
+  editFollowup: [commentId: string, followupId: string, body: string]
   addFollowup: [commentId: string, body: string]
 }>()
 
@@ -21,6 +22,10 @@ const isEditing = ref(false)
 const editText = ref('')
 const showReplyInput = ref(false)
 const replyText = ref('')
+
+// Track which followup is being edited
+const editingFollowupId = ref<string | null>(null)
+const editingFollowupText = ref('')
 
 // Use VueUse's useElementSize for reactive height tracking
 const { height } = useElementSize(commentRef)
@@ -65,6 +70,23 @@ function cancelEdit() {
   editText.value = ''
 }
 
+function startEditFollowup(followup: Followup) {
+  editingFollowupId.value = followup.id
+  editingFollowupText.value = followup.body
+}
+
+function saveEditFollowup() {
+  if (!editingFollowupText.value.trim() || !editingFollowupId.value) return
+  emit('editFollowup', props.comment.id, editingFollowupId.value, editingFollowupText.value.trim())
+  editingFollowupId.value = null
+  editingFollowupText.value = ''
+}
+
+function cancelEditFollowup() {
+  editingFollowupId.value = null
+  editingFollowupText.value = ''
+}
+
 function toggleReply() {
   showReplyInput.value = !showReplyInput.value
   if (showReplyInput.value) {
@@ -107,7 +129,7 @@ function getAuthorBadge(author: string) {
       orphaned ? 'opacity-60' : ''
     ]"
     :style="{ top: top + 'px' }"
-    @click="!isEditing && !showReplyInput && emit('click', comment)"
+    @click="!isEditing && !showReplyInput && editingFollowupId === null && emit('click', comment)"
   >
     <div class="text-xs text-gray-500 mb-1 flex items-center gap-2">
       <span class="bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-medium">
@@ -122,7 +144,7 @@ function getAuthorBadge(author: string) {
       "{{ comment.selectedText }}"
     </div>
 
-    <!-- Edit mode -->
+    <!-- Edit mode for main comment -->
     <div v-if="isEditing" class="space-y-2">
       <textarea
         v-model="editText"
@@ -146,7 +168,7 @@ function getAuthorBadge(author: string) {
       </div>
     </div>
 
-    <!-- View mode -->
+    <!-- View mode for main comment -->
     <p v-else class="text-sm text-gray-900">{{ comment.text }}</p>
 
     <!-- Followups thread -->
@@ -154,15 +176,53 @@ function getAuthorBadge(author: string) {
       <div 
         v-for="followup in comment.followups" 
         :key="followup.id"
-        class="relative"
+        class="relative group"
       >
         <div class="flex items-center gap-1.5 mb-1">
           <span class="text-xs px-1.5 py-0.5 rounded font-medium" :class="getAuthorBadge(followup.author)">
             {{ followup.author }}
           </span>
           <span class="text-xs text-gray-400">{{ formatDate(followup.createdAt) }}</span>
+          <!-- Edit button for followup (visible on hover, only for user followups) -->
+          <button
+            v-if="followup.author === 'user' && editingFollowupId !== followup.id"
+            @click.stop="startEditFollowup(followup)"
+            class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600 transition-opacity"
+            title="Edit reply"
+          >
+            <Icon name="i-lucide-pencil" class="w-3 h-3" />
+          </button>
         </div>
-        <p class="text-sm text-gray-700">{{ followup.body }}</p>
+
+        <!-- Edit mode for followup -->
+        <div v-if="editingFollowupId === followup.id" @click.stop>
+          <textarea
+            v-model="editingFollowupText"
+            rows="2"
+            class="w-full px-2 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-500 resize-y"
+            @keydown.ctrl.enter="saveEditFollowup"
+            @keydown.meta.enter="saveEditFollowup"
+            @keydown.escape="cancelEditFollowup"
+          />
+          <div class="flex justify-end gap-2 mt-1">
+            <button
+              @click.stop="cancelEditFollowup"
+              class="text-xs px-2.5 py-1 text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              @click.stop="saveEditFollowup"
+              class="text-xs px-2.5 py-1 text-white bg-red-500 hover:bg-red-600 rounded-lg"
+              :disabled="!editingFollowupText.trim()"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+
+        <!-- View mode for followup -->
+        <p v-else class="text-sm text-gray-700">{{ followup.body }}</p>
       </div>
     </div>
 
@@ -194,7 +254,7 @@ function getAuthorBadge(author: string) {
     </div>
 
     <!-- Action buttons -->
-    <div v-if="!isEditing && !showReplyInput" class="flex justify-end mt-2 gap-1">
+    <div v-if="!isEditing && !showReplyInput && editingFollowupId === null" class="flex justify-end mt-2 gap-1">
       <button 
         @click.stop="toggleReply" 
         class="text-gray-400 hover:text-red-600"
