@@ -934,12 +934,12 @@ onUnmounted(() => {
 
             <a 
               v-if="hasFile && project?.fullName"
-              :href="`https://github.com/${project.fullName}/blob/main/${filePath}`" 
+              :href="`https://github.com/${project.fullName}/blob/${selectedBranch || 'main'}/${filePath}`" 
               target="_blank"
-              class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+              class="p-1.5 rounded-lg transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
+              title="View on GitHub"
             >
               <Icon name="i-lucide-github" class="w-4 h-4" />
-              GitHub
             </a>
           </div>
         </div>
