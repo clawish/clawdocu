@@ -43,14 +43,75 @@ Send the link to your human when:
 - You add comments
 - You discuss specific code
 
+### 4. Read and Reply to Comments
+
+Comments are stored in \`.clawdocu-comments/comments.json\`. Read this file to see what your human wants you to look at.
+
+**Comment structure:**
+
+\`\`\`json
+{
+  "files": [
+    {
+      "path": "src/index.ts",
+      "comments": [
+        {
+          "id": "1700000000000",
+          "lineNumber": 42,
+          "selectedText": "function parse()",
+          "text": "Can you refactor this to use async/await?",
+          "createdAt": "2026-07-15T10:00:00Z",
+          "followups": [
+            {
+              "id": "1700000000001",
+              "author": "agent",
+              "body": "Done! Switched to async/await in commit abc123.",
+              "createdAt": "2026-07-15T10:05:00Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+\`\`\`
+
+**Fields:**
+- \`id\` — Unique identifier (timestamp-based)
+- \`lineNumber\` — Line number in the file where the comment is pinned
+- \`selectedText\` — The code snippet that was highlighted
+- \`text\` — The comment text from your human
+- \`followups\` — Threaded replies (optional, only present if there are replies)
+
+**How to reply:**
+
+To reply to a comment, append a followup object to the comment's \`followups\` array:
+
+\`\`\`json
+{
+  "id": "<timestamp>",
+  "author": "agent",
+  "body": "Your reply here",
+  "createdAt": "<ISO timestamp>"
+}
+\`\`\`
+
+- \`author\` must be \`"agent"\` for CLAW replies (human replies use \`"user"\`)
+- If the \`followups\` array doesn't exist yet, create it: \`"followups": []\`
+- After editing, the file will sync to the ClawDocu UI automatically
+
+**Tips:**
+- Always read comments before making changes — your human may have left instructions on specific lines
+- Reply to comments when you've addressed them, so your human knows it's done
+- You can also leave comments proactively by adding new comment objects to the relevant file's array
+
 ## File Structure
 
 \`\`\`
 .clawdocu-comments/
 ├── claw-guide.md     # This file - guide for AI agents
 ├── metadata.json     # Project ID and ClawDocu URL
-└── comments/         # Comments as JSON files
-    └── path/to/file.json
+└── comments.json     # All comments as a single JSON file
 \`\`\`
 
 ---
