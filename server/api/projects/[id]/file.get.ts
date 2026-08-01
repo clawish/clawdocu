@@ -62,5 +62,5 @@ export default defineEventHandler(async (event) => {
     content = Buffer.from(data.content, 'base64').toString('utf-8')
   }
   
-  return { content, name: data.name, path: data.path }
+  return { content, name: data.name, path: data.path, sha: data.sha }
 })
