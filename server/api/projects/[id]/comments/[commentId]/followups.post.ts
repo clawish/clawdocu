@@ -1,14 +1,18 @@
-// Add a followup to a comment
+// Add a followup to a comment on the specified branch
 import { getProject } from '~~/server/db/index'
 
 export default defineEventHandler(async (event) => {
   const projectId = event.context.params?.id
   const commentId = event.context.params?.commentId
   const body = await readBody(event)
-  const { author, body: followupBody } = body
+  const { author, body: followupBody, branch } = body
 
   if (!commentId || !followupBody?.trim()) {
     throw createError({ statusCode: 400, message: 'commentId and body are required' })
+  }
+
+  if (!branch) {
+    throw createError({ statusCode: 400, message: 'Branch is required' })
   }
 
   const config = useRuntimeConfig()
@@ -26,16 +30,16 @@ export default defineEventHandler(async (event) => {
   const repo = proj.fullName.split('/')[1]
   const commentPath = '.clawdocu-comments/comments.json'
 
-  // Fetch current comments
+  // Fetch current comments from the specified branch
   let sha = null
   let parsed: any = { files: [] }
 
   try {
     const res = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}`,
+      `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}?ref=${encodeURIComponent(branch)}`,
       {
         headers: {
-          Authorization: `token ${token}`,
+          Authorization: `Bearer ${token}`,
           Accept: 'application/vnd.github.v3+json'
         }
       }
@@ -76,11 +80,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Comment not found' })
   }
 
-  // Write back to GitHub
+  // Write back to GitHub on the specified branch
   const encodedContent = Buffer.from(JSON.stringify(parsed, null, 2)).toString('base64')
   const putBody: any = {
     message: `Add followup to comment ${commentId}`,
-    content: encodedContent
+    content: encodedContent,
+    branch
   }
   if (sha) putBody.sha = sha
 
@@ -89,7 +94,7 @@ export default defineEventHandler(async (event) => {
     {
       method: 'PUT',
       headers: {
-        Authorization: `token ${token}`,
+        Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github.v3+json',
         'Content-Type': 'application/json'
       },

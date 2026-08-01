@@ -67,7 +67,9 @@ const {
   deleteComment,
   editComment,
   addFollowup,
-  syncComments
+  syncComments,
+  setBranch,
+  currentBranch
 } = useComments()
 
 const {
@@ -196,6 +198,17 @@ watch([projectId, filePath], async () => {
     console.log('[watch] Closing comment box, switching to file:', filePath.value)
     closeCommentBox()
     await loadComments(projectId.value, filePath.value)
+  }
+})
+
+// Reload comments when branch changes
+watch(selectedBranch, async (newBranch) => {
+  if (newBranch) {
+    setBranch(newBranch)
+    closeCommentBox()
+    if (hasFile.value && filePath.value) {
+      await loadComments(projectId.value, filePath.value)
+    }
   }
 })
 
