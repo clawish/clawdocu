@@ -937,15 +937,17 @@ onUnmounted(() => {
             <button 
               v-if="hasFile"
               @click="handleSync"
-              class="p-1.5 rounded-lg transition-colors"
+              class="rounded-lg transition-colors flex items-center gap-1.5"
               :class="[
-                syncing ? 'bg-red-400 text-white cursor-wait' :
-                hasChanges ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-100 text-gray-400 cursor-default'
+                syncing ? 'bg-red-400 text-white cursor-wait px-2 py-1.5' :
+                hasChanges ? 'bg-red-600 text-white hover:bg-red-700 px-2.5 py-1.5' : 'bg-gray-100 text-gray-400 cursor-default p-1.5'
               ]"
               :disabled="!hasChanges || syncing"
               title="Sync comments to GitHub"
             >
+              <span v-if="hasChanges && !syncing" class="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
               <Icon :name="syncing ? 'i-lucide-loader-circle' : 'i-lucide-upload-cloud'" class="w-4 h-4" :class="syncing ? 'animate-spin' : ''" />
+              <span v-if="hasChanges" class="text-xs font-medium">{{ syncing ? 'Syncing...' : 'Sync' }}</span>
             </button>
 
             <div v-if="hasFile && isMarkdown" class="flex items-center gap-2">
@@ -1161,11 +1163,13 @@ onUnmounted(() => {
       <button 
         @click="handleSync"
         :disabled="syncing || !hasChanges"
-        class="flex-1 py-3 flex items-center justify-center text-sm"
+        class="flex-1 py-3 flex items-center justify-center gap-1.5 text-sm"
         :class="syncing ? 'text-gray-400' : hasChanges ? 'text-red-600 bg-red-50' : 'text-gray-400'"
         title="Sync"
       >
+        <span v-if="hasChanges && !syncing" class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
         <Icon :name="syncing ? 'i-lucide-loader-circle' : 'i-lucide-upload-cloud'" class="w-5 h-5" :class="syncing ? 'animate-spin' : ''" />
+        <span v-if="hasChanges" class="text-xs font-medium">{{ syncing ? 'Syncing' : 'Sync' }}</span>
       </button>
     </div>
 
