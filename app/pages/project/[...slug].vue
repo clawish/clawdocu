@@ -462,6 +462,21 @@ function handleSelectFile(item: { path: string; name: string; type: string }) {
 watch(
   () => textSelection.text.value,
   (text) => {
+    // Ignore selections inside inputs, textareas, or the comments sidebar
+    const sel = window.getSelection()
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0)
+      let node: Node | null = range.startContainer
+      while (node) {
+        if (node instanceof Element) {
+          const tag = node.tagName
+          if (tag === 'INPUT' || tag === 'TEXTAREA') return
+          if (node.closest('.comments-sidebar') || node.closest('[data-comment-input]')) return
+        }
+        node = node.parentElement
+      }
+    }
+
     if (text && text.length >= 2) {
       selectedText.value = text
       const rects = textSelection.rects.value

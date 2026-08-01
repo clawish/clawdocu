@@ -14,6 +14,7 @@ const commentText = defineModel<string>('commentText', { default: '' })
 
 <template>
   <div 
+    data-comment-input
     class="absolute bg-white border-2 border-red-500 rounded-lg shadow-lg p-3 z-50"
     :style="{ top: top + 'px', left: '16px', right: '16px' }"
   >

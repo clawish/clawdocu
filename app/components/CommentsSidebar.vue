@@ -28,7 +28,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="w-80 shrink-0 grow-0 border-l border-gray-200 bg-gray-50">
+  <div class="comments-sidebar w-80 shrink-0 grow-0 border-l border-gray-200 bg-gray-50">
     <!-- Comments positioned by line number -->
     <div class="relative z-0" :style="{ minHeight: Math.max(contentHeight || 0, linesCount * 24 + 100, 600) + 200 + 'px' }">
       <!-- Comment Input Box -->
