@@ -196,13 +196,34 @@ const { data: fileData, pending: loading, error: fileError, refresh: refreshFile
   }
 )
 
-// Extract file content from response
-const fileContent = computed(() => fileData.value?.content || '')
-const fileSha = computed(() => fileData.value?.sha || '')
+// Extract file content from response, apply pending edits if any
+const fileContent = computed(() => {
+  const raw = fileData.value?.content || ''
+  const path = filePath.value
+  if (pendingFileEdits.value[path]) {
+    return pendingFileEdits.value[path].content
+  }
+  return raw
+})
+const fileSha = computed(() => {
+  const path = filePath.value
+  if (pendingFileEdits.value[path]) {
+    return pendingFileEdits.value[path].sha
+  }
+  return fileData.value?.sha || ''
+})
 
 // File editing state
 const isEditingFile = ref(false)
 const editFileContent = ref('')
+
+// Track pending file edits (local only, synced on Sync button)
+const pendingFileEdits = ref<Record<string, { content: string; sha: string }>>({})
+
+// Whether there's anything to sync (comments or file edits)
+const hasAnythingToSync = computed(() => 
+  hasChanges.value || Object.keys(pendingFileEdits.value).length > 0
+)
 
 // Load comments when file changes
 watch([projectId, filePath], async () => {
@@ -581,18 +602,38 @@ async function handleSaveComment() {
 }
 
 const syncing = ref(false)
-const saving = ref(false)
 
 async function handleRefresh() {
   await refreshFile()
 }
 
 async function handleSync() {
-  if (!hasChanges.value || syncing.value) return
+  if (!hasAnythingToSync.value || syncing.value) return
   syncing.value = true
   try {
+    // Push pending file edits to GitHub
+    const branch = selectedBranch.value || 'main'
+    for (const [path, edit] of Object.entries(pendingFileEdits.value)) {
+      await $fetch(`/api/projects/${projectId.value}/file`, {
+        method: 'PUT',
+        body: {
+          path,
+          content: edit.content,
+          sha: edit.sha,
+          branch,
+          message: `Update ${path}`
+        }
+      })
+    }
+    pendingFileEdits.value = {}
+
+    // Sync comments
     await syncComments(projectId.value)
     await loadCommentCounts(projectId.value)
+    await refreshFile()
+    await loadTree(projectId.value, selectedBranch.value)
+  } catch (e) {
+    console.error('Failed to sync:', e)
   } finally {
     syncing.value = false
   }
@@ -608,30 +649,16 @@ function cancelEditFile() {
   editFileContent.value = ''
 }
 
-async function saveEditFile() {
-  if (saving.value) return
-  saving.value = true
-  try {
-    const branch = selectedBranch.value || 'main'
-    await $fetch(`/api/projects/${projectId.value}/file`, {
-      method: 'PUT',
-      body: {
-        path: filePath.value,
-        content: editFileContent.value,
-        sha: fileSha.value,
-        branch,
-        message: `Update ${filePath.value}`
-      }
-    })
-    isEditingFile.value = false
-    editFileContent.value = ''
-    await refreshFile()
-    await loadTree(projectId.value, selectedBranch.value)
-  } catch (e) {
-    console.error('Failed to save file:', e)
-  } finally {
-    saving.value = false
+function saveEditFile() {
+  // Save locally — will be pushed to GitHub on Sync
+  const path = filePath.value
+  if (!path) return
+  pendingFileEdits.value[path] = {
+    content: editFileContent.value,
+    sha: fileSha.value
   }
+  isEditingFile.value = false
+  editFileContent.value = ''
 }
 
 function findLineNumber(text: string): number {
@@ -918,36 +945,56 @@ onUnmounted(() => {
           </div>
           
           <div class="hidden md:flex items-center gap-2">
-            <button 
-              v-if="hasFile && !isEditingFile"
-              @click="startEditFile"
-              class="p-1.5 rounded-lg transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
-              title="Edit file"
-            >
-              <Icon name="i-lucide-pencil" class="w-4 h-4" />
-            </button>
-            <button 
-              v-if="hasFile"
-              @click="handleRefresh"
-              class="p-1.5 rounded-lg transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
-              title="Refresh file from GitHub"
-            >
-              <Icon name="i-lucide-refresh-cw" class="w-4 h-4" />
-            </button>
+            <!-- Edit mode: Save / Cancel -->
+            <template v-if="isEditingFile">
+              <button 
+                @click="cancelEditFile"
+                class="p-1.5 rounded-lg transition-colors border border-gray-200 text-gray-600 hover:bg-gray-50"
+                title="Cancel edit"
+              >
+                <Icon name="i-lucide-x" class="w-4 h-4" />
+              </button>
+              <button 
+                @click="saveEditFile"
+                class="p-1.5 rounded-lg transition-colors bg-red-600 text-white hover:bg-red-700"
+                title="Save edit (local)"
+              >
+                <Icon name="i-lucide-check" class="w-4 h-4" />
+              </button>
+            </template>
+            <!-- Normal mode: Edit / Refresh / Sync -->
+            <template v-else>
+              <button 
+                v-if="hasFile"
+                @click="startEditFile"
+                class="p-1.5 rounded-lg transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
+                title="Edit file"
+              >
+                <Icon name="i-lucide-pencil" class="w-4 h-4" />
+              </button>
+              <button 
+                v-if="hasFile"
+                @click="handleRefresh"
+                class="p-1.5 rounded-lg transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
+                title="Refresh file from GitHub"
+              >
+                <Icon name="i-lucide-refresh-cw" class="w-4 h-4" />
+              </button>
+            </template>
             <button 
               v-if="hasFile"
               @click="handleSync"
               class="rounded-lg transition-colors flex items-center gap-1.5"
               :class="[
                 syncing ? 'bg-red-400 text-white cursor-wait px-2 py-1.5' :
-                hasChanges ? 'bg-red-600 text-white hover:bg-red-700 px-2.5 py-1.5' : 'bg-gray-100 text-gray-400 cursor-default p-1.5'
+                hasAnythingToSync ? 'bg-red-600 text-white hover:bg-red-700 px-2.5 py-1.5' : 'bg-gray-100 text-gray-400 cursor-default p-1.5'
               ]"
-              :disabled="!hasChanges || syncing"
-              title="Sync comments to GitHub"
+              :disabled="!hasAnythingToSync || syncing"
+              title="Sync to GitHub"
             >
-              <span v-if="hasChanges && !syncing" class="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+              <span v-if="hasAnythingToSync && !syncing" class="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
               <Icon :name="syncing ? 'i-lucide-loader-circle' : 'i-lucide-upload-cloud'" class="w-4 h-4" :class="syncing ? 'animate-spin' : ''" />
-              <span v-if="hasChanges" class="text-xs font-medium">{{ syncing ? 'Syncing...' : 'Sync' }}</span>
+              <span v-if="hasAnythingToSync" class="text-xs font-medium">{{ syncing ? 'Syncing...' : 'Sync' }}</span>
             </button>
 
             <div v-if="hasFile && isMarkdown" class="flex items-center gap-2">
@@ -1031,25 +1078,6 @@ onUnmounted(() => {
             
             <!-- Edit Mode -->
             <div v-if="isEditingFile" class="h-full flex flex-col">
-              <div class="flex items-center justify-between mb-3">
-                <span class="text-sm text-gray-500">Editing: {{ filePath }}</span>
-                <div class="flex items-center gap-2">
-                  <button
-                    @click="cancelEditFile"
-                    class="px-3 py-1 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    @click="saveEditFile"
-                    class="px-3 py-1 text-sm rounded-lg text-white"
-                    :class="saving ? 'bg-red-400 cursor-wait' : 'bg-red-600 hover:bg-red-700'"
-                    :disabled="saving"
-                  >
-                    {{ saving ? 'Saving...' : 'Save' }}
-                  </button>
-                </div>
-              </div>
               <textarea
                 v-model="editFileContent"
                 class="flex-1 w-full font-mono text-sm leading-6 p-4 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-500"
@@ -1146,6 +1174,7 @@ onUnmounted(() => {
         </span>
       </button>
       <button 
+        v-if="!isEditingFile"
         @click="handleRefresh"
         class="flex-1 py-3 flex items-center justify-center text-sm text-gray-600"
         title="Refresh"
@@ -1160,16 +1189,33 @@ onUnmounted(() => {
       >
         <Icon name="i-lucide-pencil" class="w-5 h-5" />
       </button>
+      <!-- Edit mode: Cancel / Save -->
+      <button 
+        v-if="isEditingFile"
+        @click="cancelEditFile"
+        class="flex-1 py-3 flex items-center justify-center text-sm text-gray-600"
+        title="Cancel"
+      >
+        <Icon name="i-lucide-x" class="w-5 h-5" />
+      </button>
+      <button 
+        v-if="isEditingFile"
+        @click="saveEditFile"
+        class="flex-1 py-3 flex items-center justify-center text-sm text-red-600 bg-red-50"
+        title="Save"
+      >
+        <Icon name="i-lucide-check" class="w-5 h-5" />
+      </button>
       <button 
         @click="handleSync"
-        :disabled="syncing || !hasChanges"
+        :disabled="syncing || !hasAnythingToSync"
         class="flex-1 py-3 flex items-center justify-center gap-1.5 text-sm"
-        :class="syncing ? 'text-gray-400' : hasChanges ? 'text-red-600 bg-red-50' : 'text-gray-400'"
+        :class="syncing ? 'text-gray-400' : hasAnythingToSync ? 'text-red-600 bg-red-50' : 'text-gray-400'"
         title="Sync"
       >
-        <span v-if="hasChanges && !syncing" class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+        <span v-if="hasAnythingToSync && !syncing" class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
         <Icon :name="syncing ? 'i-lucide-loader-circle' : 'i-lucide-upload-cloud'" class="w-5 h-5" :class="syncing ? 'animate-spin' : ''" />
-        <span v-if="hasChanges" class="text-xs font-medium">{{ syncing ? 'Syncing' : 'Sync' }}</span>
+        <span v-if="hasAnythingToSync" class="text-xs font-medium">{{ syncing ? 'Syncing' : 'Sync' }}</span>
       </button>
     </div>
 
