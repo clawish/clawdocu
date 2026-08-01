@@ -26,8 +26,21 @@ const selectedText = ref('')
 const commentText = ref('')
 const commentBoxTop = ref(0)
 const currentFilePath = ref<string | null>(null)
+const currentBranch = ref<string>('main')
 
 export const useComments = () => {
+  // Set the current branch (called when branch changes)
+  const setBranch = (branch: string) => {
+    if (currentBranch.value !== branch) {
+      currentBranch.value = branch
+      // Clear local state when branch changes — comments are per-branch
+      comments.value = []
+      allComments.value = {}
+      originalAllComments.value = {}
+      currentFilePath.value = null
+    }
+  }
+
   // Load comments for a file
   const loadComments = async (projectId: string, filePath: string) => {
     currentFilePath.value = filePath
@@ -40,10 +53,10 @@ export const useComments = () => {
       // Use existing unsaved comments from memory
       comments.value = [...allComments.value[filePath]]
     } else {
-      // Load from API
+      // Load from API with branch
       try {
         const response = await $fetch(`/api/projects/${projectId}/comments`, {
-          query: { path: filePath }
+          query: { path: filePath, branch: currentBranch.value }
         })
         comments.value = response.comments || []
         allComments.value[filePath] = [...comments.value]
@@ -58,7 +71,9 @@ export const useComments = () => {
   // Load all comments from API
   const loadAllComments = async (projectId: string) => {
     try {
-      const response = await $fetch(`/api/projects/${projectId}/comments`)
+      const response = await $fetch(`/api/projects/${projectId}/comments`, {
+        query: { branch: currentBranch.value }
+      })
       // API returns { comments: Record<string, Comment[]> }
       allComments.value = response.comments || {}
       originalAllComments.value = JSON.parse(JSON.stringify(allComments.value))
@@ -156,13 +171,14 @@ export const useComments = () => {
     }
   }
 
-  // Sync comments to GitHub
+  // Sync comments to GitHub on the current branch
   const syncComments = async (projectId: string) => {
     try {
       await $fetch(`/api/projects/${projectId}/comments/sync`, {
         method: 'POST',
         body: {
-          comments: allComments.value
+          comments: allComments.value,
+          branch: currentBranch.value
         }
       })
       originalAllComments.value = JSON.parse(JSON.stringify(allComments.value))
@@ -196,8 +212,10 @@ export const useComments = () => {
     commentBoxTop,
     sortedComments,
     hasChanges,
+    currentBranch: readonly(currentBranch),
 
     // Methods
+    setBranch,
     loadComments,
     loadAllComments,
     openCommentBox,

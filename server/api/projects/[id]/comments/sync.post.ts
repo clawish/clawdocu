@@ -1,10 +1,15 @@
-// Sync comments to git repository
+// Sync comments to git repository on the specified branch
 import { getProject } from '~~/server/db/index'
+import { CLAW_GUIDE_TEMPLATE } from '~~/server/utils/claw-guide'
 
 export default defineEventHandler(async (event) => {
   const projectId = event.context.params?.id
   const body = await readBody(event)
-  const { comments } = body
+  const { comments, branch } = body
+  
+  if (!branch) {
+    throw createError({ statusCode: 400, message: 'Branch is required' })
+  }
   
   const config = useRuntimeConfig()
   const token = config.githubToken || process.env.GITHUB_TOKEN
@@ -22,6 +27,7 @@ export default defineEventHandler(async (event) => {
   const owner = proj.fullName.split('/')[0]
   const repo = proj.fullName.split('/')[1]
   const commentPath = '.clawdocu-comments/comments.json'
+  const clawdocuUrl = config.public?.clawdocuUrl || process.env.CLAWDOCU_URL || 'https://clawdocu.example.com'
   
   // Convert from Record<string, Comment[]> to files array format
   const files: any[] = []
@@ -48,11 +54,12 @@ export default defineEventHandler(async (event) => {
   const content = JSON.stringify({ files }, null, 2)
   const encodedContent = Buffer.from(content).toString('base64')
   
-  // Check if file exists to get SHA
+  // Check if comments.json exists on this branch to get SHA
   let sha = null
+  let folderExists = false
   try {
     const checkRes = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}`,
+      `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}?ref=${encodeURIComponent(branch)}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -63,15 +70,71 @@ export default defineEventHandler(async (event) => {
     if (checkRes.ok) {
       const data = await checkRes.json()
       sha = data.sha
+      folderExists = true
     }
   } catch (e) {
     // File doesn't exist yet
   }
   
-  // Create or update file
+  // If this is the first save on this branch, create metadata.json and claw-guide.md first
+  if (!folderExists) {
+    // Create metadata.json
+    const metadata = {
+      projectId,
+      clawdocuUrl,
+      createdAt: new Date().toISOString()
+    }
+    const metadataContent = JSON.stringify(metadata, null, 2)
+    const metadataEncoded = Buffer.from(metadataContent).toString('base64')
+    
+    // Create claw-guide.md with actual values
+    const clawGuideContent = CLAW_GUIDE_TEMPLATE
+      .replace(/{{CLAWDOCU_URL}}/g, clawdocuUrl)
+      .replace(/{{PROJECT_ID}}/g, projectId)
+    const clawGuideEncoded = Buffer.from(clawGuideContent).toString('base64')
+    
+    // Create both files on the branch
+    await Promise.all([
+      fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/.clawdocu-comments/metadata.json`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: 'Add ClawDocu metadata',
+            content: metadataEncoded,
+            branch
+          })
+        }
+      ),
+      fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/.clawdocu-comments/claw-guide.md`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: 'Add ClawDocu guide for CLAWs',
+            content: clawGuideEncoded,
+            branch
+          })
+        }
+      )
+    ])
+  }
+  
+  // Create or update comments.json on the branch
   const putBody: any = {
     message: files.length > 0 ? 'Update comments' : 'Remove comments',
-    content: encodedContent
+    content: encodedContent,
+    branch
   }
   
   if (sha) {

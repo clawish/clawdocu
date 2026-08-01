@@ -3,6 +3,7 @@ import { getProject } from '~~/server/db/index'
 
 export default defineEventHandler(async (event) => {
   const projectId = event.context.params?.id
+  const branch = (getQuery(event).branch as string) || 'main'
   
   const config = useRuntimeConfig()
   const token = config.githubToken || process.env.GITHUB_TOKEN
@@ -21,10 +22,10 @@ export default defineEventHandler(async (event) => {
   const repo = proj.fullName.split('/')[1]
   const commentPath = '.clawdocu-comments/comments.json'
   
-  // Try to fetch comments.json
+  // Try to fetch comments.json from the specified branch
   try {
     const res = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}`,
+      `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}?ref=${encodeURIComponent(branch)}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,

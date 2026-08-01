@@ -94,7 +94,10 @@ export const useFileTree = () => {
   // Load comment counts for all files
   const loadCommentCounts = async (projectId: string) => {
     try {
-      const response = await $fetch(`/api/projects/${projectId}/comment-counts`)
+      const currentBranch = selectedBranch.value || 'main'
+      const response = await $fetch(`/api/projects/${projectId}/comment-counts`, {
+        query: { branch: currentBranch }
+      })
       commentCounts.value = response.counts || {}
     } catch (e) {
       console.error('Failed to load comment counts:', e)
