@@ -66,6 +66,7 @@ const {
   saveComment,
   deleteComment,
   editComment,
+  editFollowup,
   addFollowup,
   syncComments,
   setBranch,
@@ -618,6 +619,10 @@ function handleEditComment(commentId: string, newText: string) {
   editComment(commentId, newText)
 }
 
+function handleEditFollowup(commentId: string, followupId: string, newBody: string) {
+  editFollowup(commentId, followupId, newBody)
+}
+
 function handleAddFollowup(commentId: string, body: string) {
   addFollowup(commentId, body, 'user')
   nextTick(() => {
@@ -956,6 +961,7 @@ onUnmounted(() => {
               @cancel="closeCommentBoxLocal"
               @delete="handleDeleteComment"
               @edit="handleEditComment"
+              @editFollowup="handleEditFollowup"
               @addFollowup="handleAddFollowup"
               @clickComment="handleClickComment"
               @heightUpdate="updateCommentBoxHeight"

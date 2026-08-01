@@ -171,6 +171,27 @@ export const useComments = () => {
     }
   }
 
+  // Edit followup (local only, sync manually)
+  const editFollowup = (commentId: string, followupId: string, newBody: string) => {
+    const updateInList = (list: Comment[]) =>
+      list.map(c => {
+        if (c.id === commentId) {
+          return {
+            ...c,
+            followups: (c.followups || []).map(f =>
+              f.id === followupId ? { ...f, body: newBody } : f
+            )
+          }
+        }
+        return c
+      })
+
+    comments.value = updateInList(comments.value)
+    if (currentFilePath.value) {
+      allComments.value[currentFilePath.value] = updateInList(allComments.value[currentFilePath.value] || [])
+    }
+  }
+
   // Sync comments to GitHub on the current branch
   const syncComments = async (projectId: string) => {
     try {
@@ -223,6 +244,7 @@ export const useComments = () => {
     saveComment,
     deleteComment,
     editComment,
+    editFollowup,
     addFollowup,
     syncComments,
     setCurrentFileComments,
