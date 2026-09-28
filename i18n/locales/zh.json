@@ -1,0 +1,72 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "cancel": "取消",
+    "save": "保存",
+    "copy": "复制",
+    "add": "添加",
+    "adding": "添加中...",
+    "view": "查看",
+    "refresh": "刷新",
+    "sync": "同步",
+    "syncing": "同步中...",
+    "edit": "编辑",
+    "branch": "分支",
+    "private": "私有",
+    "clawdocu": "ClawDocu"
+  },
+  "auth": {
+    "password": "密码",
+    "adminPassword": "输入管理员密码",
+    "invalid": "密码错误",
+    "tagline": "自托管代码文档审查工具，支持行内评论"
+  },
+  "nav": {
+    "dashboard": "仪表板"
+  },
+  "dashboard": {
+    "title": "仪表板",
+    "myProjects": "我的项目（{count}）",
+    "availableRepos": "可用仓库（{count}）",
+    "noProjects": "暂无项目。请从“可用仓库”面板添加仓库。",
+    "noRepos": "未找到仓库。",
+    "removeProject": "移除项目"
+  },
+  "project": {
+    "files": "文件",
+    "comments": "评论",
+    "commentsCount": "评论（{count}）",
+    "noFiles": "未找到文件",
+    "selectFileTree": "从文件树中选择一个文件以查看内容",
+    "selectFile": "选择一个文件进行查看",
+    "line": "第 {n} 行",
+    "addComment": "添加评论",
+    "comment": "评论",
+    "replyTo": "回复评论",
+    "writeComment": "输入你的评论...",
+    "writeReply": "输入你的回复...",
+    "enterComment": "输入你的评论...",
+    "editComment": "编辑评论",
+    "editReply": "编辑回复",
+    "deleteComment": "删除评论",
+    "nextComment": "下一条评论",
+    "prevComment": "上一条评论",
+    "viewOnGithub": "在 GitHub 上查看",
+    "refreshFile": "从 GitHub 刷新文件",
+    "syncToGithub": "同步到 GitHub",
+    "saveEdit": "保存编辑（本地）",
+    "cancelEdit": "取消编辑",
+    "editFile": "编辑文件",
+    "rename": "输入新名称：",
+    "confirmDelete": "确定要删除“{name}”吗？",
+    "view": "查看",
+    "raw": "原始"
+  },
+  "errors": {
+    "failedDelete": "删除失败",
+    "failedRename": "重命名失败",
+    "failedSync": "同步失败",
+    "failedAddProject": "添加项目失败",
+    "failedRemoveProject": "移除项目失败"
+  }
+}

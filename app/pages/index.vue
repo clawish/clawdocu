@@ -3,6 +3,8 @@ definePageMeta({
   layout: false
 })
 
+const { t } = useI18n()
+
 const form = reactive({
   password: ''
 })
@@ -49,16 +51,16 @@ async function login() {
   <div class="min-h-screen flex items-center justify-center bg-gray-50">
     <div class="w-full max-w-md">
       <div class="bg-white rounded-lg border border-gray-200 p-8">
-        <h1 class="text-2xl font-bold text-center text-red-600 mb-2">ClawDocu</h1>
-        <p class="text-center text-gray-500 mb-6">Self-hosted code documentation with inline comments</p>
+        <h1 class="text-2xl font-bold text-center text-red-600 mb-2">{{ t('common.clawdocu') }}</h1>
+        <p class="text-center text-gray-500 mb-6">{{ t('auth.tagline') }}</p>
         
         <form @submit.prevent="login" class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('auth.password') }}</label>
             <input 
               v-model="form.password" 
               type="password" 
-              placeholder="Enter admin password"
+              :placeholder="t('auth.adminPassword')"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
             />
           </div>

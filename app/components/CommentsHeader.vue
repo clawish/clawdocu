@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Comment } from '~/composables/useComments'
 
+const { t } = useI18n()
+
 defineProps<{
   comments: Comment[]
   sortedComments: Comment[]
@@ -15,7 +17,7 @@ const emit = defineEmits<{
 <template>
   <div class="w-80 shrink-0 grow-0 overflow-hidden border-l border-gray-200 bg-white px-4 py-3 flex items-center justify-between">
     <h3 class="text-xs font-semibold text-gray-500 uppercase">
-      Comments <span v-if="comments.length" class="text-gray-400">({{ comments.length }})</span>
+      {{ t('project.comments') }} <span v-if="comments.length" class="text-gray-400">({{ comments.length }})</span>
     </h3>
     <div class="flex items-center gap-1">
       <button 

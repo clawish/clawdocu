@@ -1,6 +1,6 @@
 {
   "name": "clawdocu",
-  "version": "0.5.19",
+  "version": "0.5.20",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,6 +13,7 @@
   "dependencies": {
     "@libsql/client": "^0.14.0",
     "@nuxt/ui": "^4.6.1",
+    "@nuxtjs/i18n": "^10.6.0",
     "@tailwindcss/typography": "^0.5.19",
     "@traptitech/markdown-it-katex": "^3.6.0",
     "@vueuse/core": "^14.2.1",
