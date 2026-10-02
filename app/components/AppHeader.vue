@@ -7,6 +7,12 @@ const props = defineProps<{
 const { user, logout } = useAuth()
 const config = useRuntimeConfig()
 const version = config.public.version
+
+const { t, locale, locales } = useI18n()
+const switchLocalePath = useSwitchLocalePath()
+const currentLocaleName = computed(
+  () => locales.value.find((l: any) => l.code === locale.value)?.name || locale.value
+)
 </script>
 
 <template>
@@ -24,32 +30,49 @@ const version = config.public.version
           {{ project?.name || 'ClawDocu' }}
         </NuxtLink>
         <nav class="hidden md:flex items-center gap-4">
-          <NuxtLink 
-            to="/dashboard" 
+          <NuxtLink
+            to="/dashboard"
             class="text-sm text-gray-600 hover:text-red-600 transition-colors"
           >
-            Dashboard
+            {{ t('nav.dashboard') }}
           </NuxtLink>
           <a 
             href="https://clawdocu.com/docs" 
             target="_blank"
             class="text-sm text-gray-600 hover:text-red-600 transition-colors flex items-center gap-1"
           >
-            Docs
+            {{ t('common.docs') }}
             <Icon name="i-lucide-external-link" class="w-3 h-3" />
           </a>
         </nav>
       </div>
       
       <div class="flex items-center gap-3">
-        <a 
+        <details class="relative">
+          <summary class="text-sm text-gray-500 hover:text-red-600 transition-colors cursor-pointer list-none flex items-center gap-1">
+            <Icon name="i-lucide-languages" class="w-4 h-4" />
+            {{ currentLocaleName }}
+          </summary>
+          <ul class="absolute right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[130px] z-50">
+            <li v-for="l in locales" :key="l.code">
+              <NuxtLink
+                :to="switchLocalePath(l.code)"
+                class="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                :class="{ 'font-semibold text-red-600': l.code === locale }"
+              >
+                {{ l.name }}
+              </NuxtLink>
+            </li>
+          </ul>
+        </details>
+        <a
           v-if="project?.fullName"
-          :href="`https://github.com/${project.fullName}`" 
+          :href="`https://github.com/${project.fullName}`"
           target="_blank"
           class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
         >
           <Icon name="i-lucide-github" class="w-4 h-4" />
-          View on GitHub
+          {{ t('project.viewOnGithub') }}
         </a>
         
         <div v-if="user" class="flex items-center gap-2">
@@ -63,7 +86,7 @@ const version = config.public.version
           @click="logout" 
           class="text-sm text-gray-500 hover:text-red-600 transition-colors"
         >
-          Logout
+          {{ t('common.logout') }}
         </button>
         
         <div class="flex items-center gap-2">

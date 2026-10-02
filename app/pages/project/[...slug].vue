@@ -107,6 +107,7 @@ const markdownRef = ref(null)
 const htmlPreviewRef = ref(null)
 const contentRef = ref(null)
 const scrollContainerRef = ref(null)
+const { t } = useI18n()
 const sidebarOpen = ref(true)
 const showToolbar = ref(false)
 const toolbarPosition = ref({ top: 0, left: 0 })
@@ -790,7 +791,7 @@ async function renameItem() {
   
   closeContextMenu() // Close menu immediately
   
-  const newName = prompt('Enter new name:', item.name)
+  const newName = prompt(t('project.rename'), item.name)
   if (!newName || newName === item.name) {
     return
   }
@@ -817,7 +818,7 @@ async function renameItem() {
       await loadTree(projectId.value, selectedBranch.value)
     }
   } catch (error: any) {
-    alert(error.data?.message || 'Failed to rename')
+    alert(error.data?.message || t('errors.failedRename'))
   } finally {
     loading.value = false // Hide loading
   }
@@ -829,7 +830,7 @@ async function deleteItem() {
   
   closeContextMenu() // Close menu immediately
   
-  const confirmed = confirm(`Are you sure you want to delete "${item.name}"?`)
+  const confirmed = confirm(t('project.confirmDelete', { name: item.name }))
   if (!confirmed) {
     return
   }
@@ -860,7 +861,7 @@ async function deleteItem() {
       }
     }
   } catch (error: any) {
-    alert(error.data?.message || 'Failed to delete')
+    alert(error.data?.message || t('errors.failedDelete'))
   } finally {
     loading.value = false // Hide loading
   }
@@ -907,7 +908,7 @@ onUnmounted(() => {
                 <span v-if="i < filePathSegments.length - 1" class="text-gray-300">/</span>
               </span>
             </template>
-            <span v-else class="text-gray-500">Select a file to view</span>
+            <span v-else class="text-gray-500">{{ t('project.selectFile') }}</span>
           </div>
           
           <!-- Mobile View/Raw tabs -->
@@ -950,14 +951,14 @@ onUnmounted(() => {
               <button 
                 @click="cancelEditFile"
                 class="p-1.5 rounded-lg transition-colors border border-gray-200 text-gray-600 hover:bg-gray-50"
-                title="Cancel edit"
+                :title="t('project.cancelEdit')"
               >
                 <Icon name="i-lucide-x" class="w-4 h-4" />
               </button>
               <button 
                 @click="saveEditFile"
                 class="p-1.5 rounded-lg transition-colors bg-red-600 text-white hover:bg-red-700"
-                title="Save edit (local)"
+                :title="t('project.saveEdit')"
               >
                 <Icon name="i-lucide-check" class="w-4 h-4" />
               </button>
@@ -968,7 +969,7 @@ onUnmounted(() => {
                 v-if="hasFile"
                 @click="startEditFile"
                 class="p-1.5 rounded-lg transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
-                title="Edit file"
+                :title="t('project.editFile')"
               >
                 <Icon name="i-lucide-pencil" class="w-4 h-4" />
               </button>
@@ -976,7 +977,7 @@ onUnmounted(() => {
                 v-if="hasFile"
                 @click="handleRefresh"
                 class="p-1.5 rounded-lg transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
-                title="Refresh file from GitHub"
+                :title="t('project.refreshFile')"
               >
                 <Icon name="i-lucide-refresh-cw" class="w-4 h-4" />
               </button>
@@ -990,11 +991,11 @@ onUnmounted(() => {
                 hasAnythingToSync ? 'bg-red-600 text-white hover:bg-red-700 px-2.5 py-1.5' : 'bg-gray-100 text-gray-400 cursor-default p-1.5'
               ]"
               :disabled="!hasAnythingToSync || syncing"
-              title="Sync to GitHub"
+              :title="t('project.syncToGithub')"
             >
               <span v-if="hasAnythingToSync && !syncing" class="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
               <Icon :name="syncing ? 'i-lucide-loader-circle' : 'i-lucide-upload-cloud'" class="w-4 h-4" :class="syncing ? 'animate-spin' : ''" />
-              <span v-if="hasAnythingToSync" class="text-xs font-medium">{{ syncing ? 'Syncing...' : 'Sync' }}</span>
+              <span v-if="hasAnythingToSync" class="text-xs font-medium">{{ syncing ? t('common.syncing') : t('common.sync') }}</span>
             </button>
 
             <div v-if="hasFile && isMarkdown" class="flex items-center gap-2">
@@ -1035,7 +1036,7 @@ onUnmounted(() => {
               :href="`https://github.com/${project.fullName}/blob/${selectedBranch || 'main'}/${filePath}`" 
               target="_blank"
               class="p-1.5 rounded-lg transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
-              title="View on GitHub"
+              :title="t('project.viewOnGithub')"
             >
               <Icon name="i-lucide-github" class="w-4 h-4" />
             </a>
@@ -1059,12 +1060,12 @@ onUnmounted(() => {
           <!-- File Content -->
           <div ref="contentRef" class="flex-1 min-w-0 p-4 md:p-6 bg-white relative">
             <!-- Loading -->
-            <div v-if="loading" class="text-gray-400 text-center py-8">Loading...</div>
+            <div v-if="loading" class="text-gray-400 text-center py-8">{{ t('common.loading') }}</div>
             
             <!-- Empty State (no file selected) -->
             <div v-else-if="!hasFile" class="text-gray-400 text-center py-16">
               <Icon name="i-lucide-file-text" class="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p>Select a file from the tree to view its contents</p>
+              <p>{{ t('project.selectFileTree') }}</p>
             </div>
             
             <!-- Image View -->
@@ -1138,9 +1139,9 @@ onUnmounted(() => {
             <!-- Empty Comments Sidebar (no file) -->
             <aside v-else class="w-80 shrink-0 border-l border-gray-200 bg-white">
               <div class="p-4">
-                <h3 class="text-xs font-semibold text-gray-500 uppercase mb-3">Comments</h3>
+                <h3 class="text-xs font-semibold text-gray-500 uppercase mb-3">{{ t('project.comments') }}</h3>
                 <div class="text-gray-400 text-sm text-center py-8">
-                  Select a file to view comments.
+                  {{ t('project.selectFileComments') }}
                 </div>
               </div>
             </aside>
@@ -1177,7 +1178,7 @@ onUnmounted(() => {
         v-if="!isEditingFile"
         @click="handleRefresh"
         class="flex-1 py-3 flex items-center justify-center text-sm text-gray-600"
-        title="Refresh"
+        :title="t('common.refresh')"
       >
         <Icon name="i-lucide-refresh-cw" class="w-5 h-5" />
       </button>
@@ -1185,7 +1186,7 @@ onUnmounted(() => {
         v-if="!isEditingFile"
         @click="startEditFile"
         class="flex-1 py-3 flex items-center justify-center text-sm text-gray-600"
-        title="Edit"
+        :title="t('common.edit')"
       >
         <Icon name="i-lucide-pencil" class="w-5 h-5" />
       </button>
@@ -1194,7 +1195,7 @@ onUnmounted(() => {
         v-if="isEditingFile"
         @click="cancelEditFile"
         class="flex-1 py-3 flex items-center justify-center text-sm text-gray-600"
-        title="Cancel"
+        :title="t('common.cancel')"
       >
         <Icon name="i-lucide-x" class="w-5 h-5" />
       </button>
@@ -1202,7 +1203,7 @@ onUnmounted(() => {
         v-if="isEditingFile"
         @click="saveEditFile"
         class="flex-1 py-3 flex items-center justify-center text-sm text-red-600 bg-red-50"
-        title="Save"
+        :title="t('common.save')"
       >
         <Icon name="i-lucide-check" class="w-5 h-5" />
       </button>
@@ -1211,11 +1212,11 @@ onUnmounted(() => {
         :disabled="syncing || !hasAnythingToSync"
         class="flex-1 py-3 flex items-center justify-center gap-1.5 text-sm"
         :class="syncing ? 'text-gray-400' : hasAnythingToSync ? 'text-red-600 bg-red-50' : 'text-gray-400'"
-        title="Sync"
+        :title="t('common.sync')"
       >
         <span v-if="hasAnythingToSync && !syncing" class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
         <Icon :name="syncing ? 'i-lucide-loader-circle' : 'i-lucide-upload-cloud'" class="w-5 h-5" :class="syncing ? 'animate-spin' : ''" />
-        <span v-if="hasAnythingToSync" class="text-xs font-medium">{{ syncing ? 'Syncing' : 'Sync' }}</span>
+        <span v-if="hasAnythingToSync" class="text-xs font-medium">{{ syncing ? t('common.syncing') : t('common.sync') }}</span>
       </button>
     </div>
 
@@ -1228,7 +1229,7 @@ onUnmounted(() => {
         <div class="absolute inset-0 bg-black/50" @click="mobileTab = null" />
         <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[70vh] overflow-hidden flex flex-col">
           <div class="flex items-center justify-between p-4 border-b">
-            <h3 class="font-semibold">Files</h3>
+            <h3 class="font-semibold">{{ t('project.files') }}</h3>
             <button @click="mobileTab = null" class="p-1 text-gray-400 hover:text-gray-600">
               <Icon name="i-lucide-x" class="w-5 h-5" />
             </button>
@@ -1252,7 +1253,7 @@ onUnmounted(() => {
         <div class="absolute inset-0 bg-black/50" @click="mobileTab = null" />
         <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[70vh] overflow-hidden flex flex-col">
           <div class="flex items-center justify-between p-4 border-b">
-            <h3 class="font-semibold">Comments ({{ comments.length }})</h3>
+            <h3 class="font-semibold">{{ t('project.commentsCount', { count: comments.length }) }}</h3>
             <button @click="mobileTab = null" class="p-1 text-gray-400 hover:text-gray-600">
               <Icon name="i-lucide-x" class="w-5 h-5" />
             </button>
@@ -1298,7 +1299,7 @@ onUnmounted(() => {
         <div class="absolute inset-0 bg-black/50" @click="closeCommentBoxLocal" />
         <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl p-4">
           <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold">Add Comment</h3>
+            <h3 class="font-semibold">{{ t('project.addComment') }}</h3>
             <button @click="closeCommentBoxLocal" class="p-1 text-gray-400 hover:text-gray-600">
               <Icon name="i-lucide-x" class="w-5 h-5" />
             </button>
@@ -1308,7 +1309,7 @@ onUnmounted(() => {
           </div>
           <textarea
             v-model="commentText"
-            placeholder="Write your comment..."
+            :placeholder="t('project.writeComment')"
             class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
             rows="3"
           />
@@ -1343,14 +1344,14 @@ onUnmounted(() => {
           class="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded"
         >
           <Icon name="i-lucide-copy" class="w-4 h-4" />
-          <span>Copy</span>
+          <span>{{ t('common.copy') }}</span>
         </button>
         <button 
           @click="openCommentBoxLocal"
           class="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded"
         >
           <Icon name="i-lucide-message-square-plus" class="w-4 h-4" />
-          <span>Comment</span>
+          <span>{{ t('project.comment') }}</span>
         </button>
       </div>
     </Teleport>

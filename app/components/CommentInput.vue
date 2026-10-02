@@ -10,6 +10,8 @@ const emit = defineEmits<{
 }>()
 
 const commentText = defineModel<string>('commentText', { default: '' })
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -23,13 +25,13 @@ const commentText = defineModel<string>('commentText', { default: '' })
     </div>
     <UTextarea 
       v-model="commentText"
-      placeholder="Enter your comment..."
+      :placeholder="t('project.writeComment')"
       :rows="3"
       class="block w-full"
     />
     <div class="flex gap-2 mt-2">
-      <UButton @click="emit('save')" size="xs" label="Save" color="error" />
-      <UButton @click="emit('cancel')" size="xs" variant="ghost" label="Cancel" />
+      <UButton @click="emit('save')" size="xs" :label="t('common.save')" color="error" />
+      <UButton @click="emit('cancel')" size="xs" variant="ghost" :label="t('common.cancel')" />
     </div>
   </div>
 </template>

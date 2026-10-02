@@ -4,6 +4,8 @@ definePageMeta({
   middleware: 'auth'
 })
 
+const { t } = useI18n()
+
 const projects = ref([])
 const availableRepos = ref([])
 const loadingRepos = ref(false)
@@ -83,13 +85,13 @@ const filteredRepos = computed(() => {
     <div class="max-w-6xl mx-auto">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <h1 class="text-2xl font-bold text-gray-900">{{ t('dashboard.title') }}</h1>
         <button 
           @click="fetchAvailableRepos" 
           class="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           <Icon name="i-lucide-refresh-cw" class="w-4 h-4" :class="{ 'animate-spin': loadingRepos }" />
-          Refresh Repos
+          {{ t('common.refreshRepos') }}
         </button>
       </div>
 
@@ -98,10 +100,10 @@ const filteredRepos = computed(() => {
         <!-- My Projects -->
         <div class="bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col max-h-[calc(100vh-12rem)]">
           <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 shrink-0">
-            <h2 class="font-medium text-gray-900">My Projects ({{ projects.length }})</h2>
+            <h2 class="font-medium text-gray-900">{{ t('dashboard.myProjects', { count: projects.length }) }}</h2>
           </div>
           <div v-if="projects.length === 0" class="p-8 text-center text-gray-500">
-            No projects yet. Add a repository from the Available Repos panel.
+            {{ t('dashboard.noProjects') }}
           </div>
           <div v-else class="divide-y divide-gray-200 overflow-y-auto">
             <div 
@@ -127,7 +129,7 @@ const filteredRepos = computed(() => {
                   @click="removeProject(project.id)"
                   :disabled="removing === project.id"
                   class="p-2 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                  title="Remove project"
+                  :title="t('dashboard.removeProject')"
                 >
                   <Icon name="i-lucide-trash" class="w-5 h-5" />
                 </button>
@@ -139,13 +141,13 @@ const filteredRepos = computed(() => {
         <!-- Available Repos -->
         <div class="bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col max-h-[calc(100vh-12rem)]">
           <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 shrink-0">
-            <h2 class="font-medium text-gray-900">Available Repos ({{ filteredRepos.length }})</h2>
+            <h2 class="font-medium text-gray-900">{{ t('dashboard.availableRepos', { count: filteredRepos.length }) }}</h2>
           </div>
           <div v-if="loadingRepos" class="p-8 text-center text-gray-500">
-            Loading repositories...
+            {{ t('common.loadingRepos') }}
           </div>
           <div v-else-if="filteredRepos.length === 0" class="p-8 text-center text-gray-500">
-            {{ projects.length > 0 ? 'All repos are already added as projects.' : 'No repositories found. Make sure your GITHUB_TOKEN has access to repos.' }}
+            {{ projects.length > 0 ? t('dashboard.allReposAdded') : t('dashboard.noReposToken') }}
           </div>
           <div v-else class="divide-y divide-gray-200 overflow-y-auto">
             <div 
@@ -156,7 +158,7 @@ const filteredRepos = computed(() => {
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
                   <span class="font-medium text-gray-900">{{ repo.fullName }}</span>
-                  <span v-if="repo.private" class="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">Private</span>
+                  <span v-if="repo.private" class="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{{ t('common.private') }}</span>
                 </div>
                 <p v-if="repo.description" class="text-sm text-gray-500 truncate mt-0.5">{{ repo.description }}</p>
               </div>
@@ -165,7 +167,7 @@ const filteredRepos = computed(() => {
                 :disabled="adding === repo.fullName"
                 class="ml-4 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {{ adding === repo.fullName ? 'Adding...' : 'Add' }}
+                {{ adding === repo.fullName ? t('common.adding') : t('common.add') }}
               </button>
             </div>
           </div>

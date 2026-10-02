@@ -1,0 +1,83 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "save": "Save",
+    "copy": "Copy",
+    "add": "Add",
+    "adding": "Adding...",
+    "view": "View",
+    "refresh": "Refresh",
+    "sync": "Sync",
+    "syncing": "Syncing...",
+    "edit": "Edit",
+    "branch": "Branch",
+    "private": "Private",
+    "clawdocu": "ClawDocu",
+    "logout": "Logout",
+    "docs": "Docs",
+    "refreshRepos": "Refresh Repos",
+    "loadingRepos": "Loading repositories..."
+  },
+  "auth": {
+    "password": "Password",
+    "adminPassword": "Enter admin password",
+    "invalid": "Invalid password",
+    "tagline": "Self-hosted code documentation with inline comments",
+    "login": "Login",
+    "loggingIn": "Logging in...",
+    "loginFailed": "Login failed",
+    "adminPasswordMissing": "⚠️ Admin password not configured. Set {code} environment variable."
+  },
+  "nav": {
+    "dashboard": "Dashboard"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "myProjects": "My Projects ({count})",
+    "availableRepos": "Available Repos ({count})",
+    "noProjects": "No projects yet. Add a repository from the Available Repos panel.",
+    "noRepos": "No repositories found.",
+    "removeProject": "Remove project",
+    "allReposAdded": "All repos are already added as projects.",
+    "noReposToken": "No repositories found. Make sure your GITHUB_TOKEN has access to repos."
+  },
+  "project": {
+    "files": "Files",
+    "comments": "Comments",
+    "commentsCount": "Comments ({count})",
+    "noFiles": "No files found",
+    "selectFileTree": "Select a file from the tree to view its contents",
+    "selectFile": "Select a file to view",
+    "selectFileComments": "Select a file to view comments.",
+    "line": "Line {n}",
+    "addComment": "Add Comment",
+    "comment": "Comment",
+    "replyTo": "Reply to comment",
+    "writeComment": "Write your comment...",
+    "writeReply": "Write a reply...",
+    "enterComment": "Enter your comment...",
+    "editComment": "Edit comment",
+    "editReply": "Edit reply",
+    "deleteComment": "Delete comment",
+    "nextComment": "Next comment",
+    "prevComment": "Previous comment",
+    "viewOnGithub": "View on GitHub",
+    "refreshFile": "Refresh file from GitHub",
+    "syncToGithub": "Sync to GitHub",
+    "saveEdit": "Save edit (local)",
+    "cancelEdit": "Cancel edit",
+    "editFile": "Edit file",
+    "rename": "Enter new name:",
+    "confirmDelete": "Are you sure you want to delete \"{name}\"?",
+    "view": "View",
+    "raw": "Raw"
+  },
+  "errors": {
+    "failedDelete": "Failed to delete",
+    "failedRename": "Failed to rename",
+    "failedSync": "Failed to sync",
+    "failedAddProject": "Failed to add project",
+    "failedRemoveProject": "Failed to remove project"
+  }
+}

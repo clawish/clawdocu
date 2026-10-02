@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n()
 import type { Comment, Followup } from '~/composables/useComments'
 
 const props = defineProps<{
@@ -188,7 +189,7 @@ function getAuthorBadge(author: string) {
             v-if="followup.author === 'user' && editingFollowupId !== followup.id"
             @click.stop="startEditFollowup(followup)"
             class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600 transition-opacity"
-            title="Edit reply"
+            :title="t('project.editReply')"
           >
             <Icon name="i-lucide-pencil" class="w-3 h-3" />
           </button>
@@ -232,7 +233,7 @@ function getAuthorBadge(author: string) {
         v-model="replyText"
         rows="2"
         class="reply-textarea w-full px-2 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-500 resize-y"
-        placeholder="Write a reply..."
+        :placeholder="t('project.writeReply')"
         @keydown.ctrl.enter="submitReply"
         @keydown.meta.enter="submitReply"
       />
@@ -258,21 +259,21 @@ function getAuthorBadge(author: string) {
       <button 
         @click.stop="toggleReply" 
         class="text-gray-400 hover:text-red-600"
-        title="Reply to comment"
+        :title="t('project.replyTo')"
       >
         <Icon name="i-lucide-message-circle" class="w-4 h-4" />
       </button>
       <button 
         @click.stop="startEdit" 
         class="text-gray-400 hover:text-red-600"
-        title="Edit comment"
+        :title="t('project.editComment')"
       >
         <Icon name="i-lucide-pencil" class="w-4 h-4" />
       </button>
       <button 
         @click.stop="emit('delete', comment.id)" 
         class="text-gray-400 hover:text-red-600"
-        title="Delete comment"
+        :title="t('project.deleteComment')"
       >
         <Icon name="i-lucide-trash" class="w-4 h-4" />
       </button>
