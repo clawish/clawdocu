@@ -10,6 +10,9 @@ const version = config.public.version
 
 const { t, locale, locales } = useI18n()
 const switchLocalePath = useSwitchLocalePath()
+// Close the dropdown when a locale is chosen — native <details> otherwise
+// stays open after navigation (same fix as MFT's theme menu).
+const langMenu = ref<HTMLDetailsElement | null>(null)
 const currentLocaleName = computed(
   () => locales.value.find((l: any) => l.code === locale.value)?.name || locale.value
 )
@@ -48,7 +51,7 @@ const currentLocaleName = computed(
       </div>
       
       <div class="flex items-center gap-3">
-        <details class="relative">
+        <details ref="langMenu" class="relative">
           <summary class="text-sm text-gray-500 hover:text-red-600 transition-colors cursor-pointer list-none flex items-center gap-1">
             <Icon name="i-lucide-languages" class="w-4 h-4" />
             {{ currentLocaleName }}
@@ -57,6 +60,7 @@ const currentLocaleName = computed(
             <li v-for="l in locales" :key="l.code">
               <NuxtLink
                 :to="switchLocalePath(l.code)"
+                @click="langMenu?.removeAttribute('open')"
                 class="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
                 :class="{ 'font-semibold text-red-600': l.code === locale }"
               >
