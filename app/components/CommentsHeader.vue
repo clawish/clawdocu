@@ -24,7 +24,7 @@ const emit = defineEmits<{
         @click="emit('navigate', -1)"
         class="p-1 rounded hover:bg-gray-100 transition-colors"
         :class="sortedComments.length === 0 || currentCommentIndex <= 0 ? 'opacity-30 cursor-default' : 'cursor-pointer'"
-        title="Previous comment"
+        :title="t('project.prevComment')"
       >
         <Icon name="i-lucide-chevron-up" class="w-4 h-4 text-gray-500" />
       </button>
@@ -35,7 +35,7 @@ const emit = defineEmits<{
         @click="emit('navigate', 1)"
         class="p-1 rounded hover:bg-gray-100 transition-colors"
         :class="sortedComments.length === 0 || currentCommentIndex >= sortedComments.length - 1 ? 'opacity-30 cursor-default' : 'cursor-pointer'"
-        title="Next comment"
+        :title="t('project.nextComment')"
       >
         <Icon name="i-lucide-chevron-down" class="w-4 h-4 text-gray-500" />
       </button>

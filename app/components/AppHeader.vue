@@ -41,7 +41,7 @@ const currentLocaleName = computed(
             target="_blank"
             class="text-sm text-gray-600 hover:text-red-600 transition-colors flex items-center gap-1"
           >
-            Docs
+            {{ t('common.docs') }}
             <Icon name="i-lucide-external-link" class="w-3 h-3" />
           </a>
         </nav>
@@ -86,7 +86,7 @@ const currentLocaleName = computed(
           @click="logout" 
           class="text-sm text-gray-500 hover:text-red-600 transition-colors"
         >
-          Logout
+          {{ t('common.logout') }}
         </button>
         
         <div class="flex items-center gap-2">

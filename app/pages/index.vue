@@ -40,7 +40,7 @@ async function login() {
     window.location.href = '/dashboard'
   } catch (e) {
     console.error('[login] Error:', e)
-    alert(e.data?.message || 'Login failed')
+    alert(e.data?.message || t('auth.loginFailed'))
   } finally {
     loading.value = false
   }
@@ -70,13 +70,13 @@ async function login() {
             :disabled="loading"
             class="w-full py-2 px-4 text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
-            {{ loading ? 'Logging in...' : 'Login' }}
+            {{ loading ? t('auth.loggingIn') : t('auth.login') }}
           </button>
         </form>
         
         <div v-if="configured === false" class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p class="text-sm text-yellow-800">
-            ⚠️ Admin password not configured. Set <code class="bg-yellow-100 px-1 rounded">ADMIN_PASSWORD</code> environment variable.
+            {{ t('auth.adminPasswordMissing', { code: 'ADMIN_PASSWORD' }) }}
           </p>
         </div>
       </div>

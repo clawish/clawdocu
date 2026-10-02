@@ -91,7 +91,7 @@ const filteredRepos = computed(() => {
           class="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           <Icon name="i-lucide-refresh-cw" class="w-4 h-4" :class="{ 'animate-spin': loadingRepos }" />
-          Refresh Repos
+          {{ t('common.refreshRepos') }}
         </button>
       </div>
 
@@ -144,10 +144,10 @@ const filteredRepos = computed(() => {
             <h2 class="font-medium text-gray-900">{{ t('dashboard.availableRepos', { count: filteredRepos.length }) }}</h2>
           </div>
           <div v-if="loadingRepos" class="p-8 text-center text-gray-500">
-            Loading repositories...
+            {{ t('common.loadingRepos') }}
           </div>
           <div v-else-if="filteredRepos.length === 0" class="p-8 text-center text-gray-500">
-            {{ projects.length > 0 ? 'All repos are already added as projects.' : 'No repositories found. Make sure your GITHUB_TOKEN has access to repos.' }}
+            {{ projects.length > 0 ? t('dashboard.allReposAdded') : t('dashboard.noReposToken') }}
           </div>
           <div v-else class="divide-y divide-gray-200">
             <div 

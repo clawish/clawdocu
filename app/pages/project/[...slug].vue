@@ -1080,9 +1080,9 @@ onUnmounted(() => {
             <!-- Empty Comments Sidebar (no file) -->
             <aside v-else class="w-80 shrink-0 border-l border-gray-200 bg-white">
               <div class="p-4">
-                <h3 class="text-xs font-semibold text-gray-500 uppercase mb-3">Comments</h3>
+                <h3 class="text-xs font-semibold text-gray-500 uppercase mb-3">{{ t('project.comments') }}</h3>
                 <div class="text-gray-400 text-sm text-center py-8">
-                  Select a file to view comments.
+                  {{ t('project.selectFileComments') }}
                 </div>
               </div>
             </aside>
@@ -1119,7 +1119,7 @@ onUnmounted(() => {
         v-if="!isEditingFile"
         @click="handleRefresh"
         class="flex-1 py-3 flex items-center justify-center text-sm text-gray-600"
-        title="Refresh"
+        :title="t('common.refresh')"
       >
         <Icon name="i-lucide-refresh-cw" class="w-5 h-5" />
       </button>
@@ -1127,7 +1127,7 @@ onUnmounted(() => {
         v-if="!isEditingFile"
         @click="startEditFile"
         class="flex-1 py-3 flex items-center justify-center text-sm text-gray-600"
-        title="Edit"
+        :title="t('common.edit')"
       >
         <Icon name="i-lucide-pencil" class="w-5 h-5" />
       </button>
@@ -1136,7 +1136,7 @@ onUnmounted(() => {
         v-if="isEditingFile"
         @click="cancelEditFile"
         class="flex-1 py-3 flex items-center justify-center text-sm text-gray-600"
-        title="Cancel"
+        :title="t('common.cancel')"
       >
         <Icon name="i-lucide-x" class="w-5 h-5" />
       </button>
@@ -1144,7 +1144,7 @@ onUnmounted(() => {
         v-if="isEditingFile"
         @click="saveEditFile"
         class="flex-1 py-3 flex items-center justify-center text-sm text-red-600 bg-red-50"
-        title="Save"
+        :title="t('common.save')"
       >
         <Icon name="i-lucide-check" class="w-5 h-5" />
       </button>
@@ -1153,7 +1153,7 @@ onUnmounted(() => {
         :disabled="syncing || !hasAnythingToSync"
         class="flex-1 py-3 flex items-center justify-center gap-1.5 text-sm"
         :class="syncing ? 'text-gray-400' : hasAnythingToSync ? 'text-red-600 bg-red-50' : 'text-gray-400'"
-        title="Sync"
+        :title="t('common.sync')"
       >
         <span v-if="hasAnythingToSync && !syncing" class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
         <Icon :name="syncing ? 'i-lucide-loader-circle' : 'i-lucide-upload-cloud'" class="w-5 h-5" :class="syncing ? 'animate-spin' : ''" />
@@ -1250,7 +1250,7 @@ onUnmounted(() => {
           </div>
           <textarea
             v-model="commentText"
-            placeholder="Write your comment..."
+            :placeholder="t('project.writeComment')"
             class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
             rows="3"
           />
