@@ -5,6 +5,7 @@ definePageMeta({
 })
 
 const { t } = useI18n()
+const localePath = useLocalePath()
 
 const projects = ref([])
 const availableRepos = ref([])
@@ -112,7 +113,7 @@ const filteredRepos = computed(() => {
               class="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <NuxtLink 
-                :to="`/project/${project.id}`"
+                :to="localePath(`/project/${project.id}`)"
                 class="flex-1 min-w-0"
               >
                 <h3 class="font-medium text-gray-900">{{ project.name }}</h3>
@@ -120,7 +121,7 @@ const filteredRepos = computed(() => {
               </NuxtLink>
               <div class="flex items-center gap-2 ml-4">
                 <NuxtLink 
-                  :to="`/project/${project.id}`"
+                  :to="localePath(`/project/${project.id}`)"
                   class="p-2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <Icon name="i-lucide-chevron-right" class="w-5 h-5" />

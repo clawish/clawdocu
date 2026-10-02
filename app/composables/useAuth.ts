@@ -1,4 +1,5 @@
 export const useAuth = () => {
+  const localePath = useLocalePath()
   // Use useState for singleton state (SSR-safe, shared across components)
   const user = useState('authUser', () => null as any)
   const isAuthenticated = useState('authIsAuthenticated', () => false)
@@ -41,7 +42,7 @@ export const useAuth = () => {
 
   async function logout() {
     await $fetch('/api/auth/logout', { method: 'POST' })
-    window.location.href = '/'
+    window.location.href = localePath('/')
   }
 
   return {
