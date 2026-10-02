@@ -13,6 +13,15 @@ const switchLocalePath = useSwitchLocalePath()
 // Close the dropdown when a locale is chosen — native <details> otherwise
 // stays open after navigation (same fix as MFT's theme menu).
 const langMenu = ref<HTMLDetailsElement | null>(null)
+
+// Close when clicking anywhere outside the menu.
+const onClickOutside = (e: MouseEvent) => {
+  if (langMenu.value?.open && !langMenu.value.contains(e.target as Node)) {
+    langMenu.value.removeAttribute('open')
+  }
+}
+onMounted(() => document.addEventListener('click', onClickOutside))
+onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
 const currentLocaleName = computed(
   () => locales.value.find((l: any) => l.code === locale.value)?.name || locale.value
 )
