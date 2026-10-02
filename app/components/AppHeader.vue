@@ -10,6 +10,7 @@ const version = config.public.version
 
 const { t, locale, locales } = useI18n()
 const switchLocalePath = useSwitchLocalePath()
+const localePath = useLocalePath()
 // Close the dropdown when a locale is chosen — native <details> otherwise
 // stays open after navigation (same fix as MFT's theme menu).
 const langMenu = ref<HTMLDetailsElement | null>(null)
@@ -33,17 +34,17 @@ const currentLocaleName = computed(
       <div class="flex items-center gap-6">
         <NuxtLink 
           v-if="showBack" 
-          to="/dashboard" 
+          :to="localePath('/dashboard')" 
           class="text-gray-400 hover:text-gray-600"
         >
           <Icon name="i-lucide-arrow-left" class="w-5 h-5" />
         </NuxtLink>
-        <NuxtLink to="/dashboard" class="text-xl font-bold text-red-600">
+        <NuxtLink :to="localePath('/dashboard')" class="text-xl font-bold text-red-600">
           {{ project?.name || 'ClawDocu' }}
         </NuxtLink>
         <nav class="hidden md:flex items-center gap-4">
           <NuxtLink
-            to="/dashboard"
+            :to="localePath('/dashboard')"
             class="text-sm text-gray-600 hover:text-red-600 transition-colors"
           >
             {{ t('nav.dashboard') }}

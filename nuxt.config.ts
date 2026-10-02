@@ -23,7 +23,10 @@ export default defineNuxtConfig({
     detectBrowserLanguage: {
       useCookie: true,
       cookieKey: 'clawdocu_i18n',
-      redirectOn: 'no prefix',
+      // Same as MFT/posterlet: browser detection only ever redirects the root
+      // (first visit), never deep links. Persistence within the app comes
+      // from localePath()-wrapped links — URLs carry the locale.
+      redirectOn: 'root',
       alwaysRedirect: false,
       fallbackLocale: 'en'
     }

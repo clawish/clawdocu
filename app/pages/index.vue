@@ -4,6 +4,7 @@ definePageMeta({
 })
 
 const { t } = useI18n()
+const localePath = useLocalePath()
 
 const form = reactive({
   password: ''
@@ -19,7 +20,7 @@ onMounted(async () => {
     configured.value = data.configured
     if (data.loggedIn) {
       console.log('[index onMounted] Already logged in, redirecting to dashboard')
-      window.location.href = '/dashboard'
+      window.location.href = localePath('/dashboard')
     }
   } catch (e) {
     console.error('Failed to check auth status:', e)
@@ -37,7 +38,7 @@ async function login() {
     })
     console.log('[login] Success:', result)
     // Full page reload to dashboard
-    window.location.href = '/dashboard'
+    window.location.href = localePath('/dashboard')
   } catch (e) {
     console.error('[login] Error:', e)
     alert(e.data?.message || t('auth.loginFailed'))
