@@ -1,0 +1,14 @@
+node_modules
+.nuxt
+.output
+.data
+data
+dist
+.env
+.env.*
+!.env.example
+.clawdocu-comments
+*.log
+.DS_Store
+.git
+.github
