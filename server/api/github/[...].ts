@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
     Accept: 'application/vnd.github.v3+json',
   }
   
-  const options = { headers, method }
+  const options: any = { headers, method }
   
   if (method === 'PUT' || method === 'POST') {
     const body = await readBody(event)

@@ -1,15 +1,10 @@
-// Get project file tree from GitHub
+// Get project file tree from forge (GitHub or Gitee by project source)
 import { getProject } from '~~/server/db/index'
+import { forgeFetch } from '~~/server/utils/forge'
 
 export default defineEventHandler(async (event) => {
   const projectId = event.context.params?.id
   const branchQuery = getQuery(event).branch as string | undefined
-  
-  const config = useRuntimeConfig()
-  const token = config.githubToken || process.env.GITHUB_TOKEN
-  if (!token) {
-    throw createError({ statusCode: 500, message: 'GITHUB_TOKEN not configured' })
-  }
   
   // Get project from database
   const proj = await getProject(projectId)
@@ -22,32 +17,21 @@ export default defineEventHandler(async (event) => {
   const repo = proj.fullName.split('/')[1]
   
   // Get repo info to determine default branch
-  const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github.v3+json'
-    }
-  })
+  const repoRes = await forgeFetch(proj, `/repos/${owner}/${repo}`)
   
   if (!repoRes.ok) {
-    throw createError({ statusCode: repoRes.status, message: 'Failed to fetch repo info from GitHub' })
+    throw createError({ statusCode: repoRes.status, message: 'Failed to fetch repo info from forge' })
   }
   
   const repoData = await repoRes.json()
   const defaultBranch = repoData.default_branch || 'main'
   const branch = branchQuery || defaultBranch
   
-  // Get tree from GitHub
-  const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github.v3+json'
-    }
-  })
+  // Get tree
+  const res = await forgeFetch(proj, `/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`)
   
   if (!res.ok) {
-    throw createError({ statusCode: res.status, message: 'Failed to fetch tree from GitHub' })
+    throw createError({ statusCode: res.status, message: 'Failed to fetch tree from forge' })
   }
   
   const data = await res.json()
@@ -56,23 +40,18 @@ export default defineEventHandler(async (event) => {
   const tree = buildTree(data.tree)
   
   // Get branches
-  const branchesRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github.v3+json'
-    }
-  })
+  const branchesRes = await forgeFetch(proj, `/repos/${owner}/${repo}/branches`)
   
   let branches = [defaultBranch]
   if (branchesRes.ok) {
     const branchesData = await branchesRes.json()
-    branches = branchesData.map(b => b.name)
+    branches = branchesData.map((b: any) => b.name)
   }
   
   return { tree, branches, defaultBranch }
 })
 
-function buildTree(items) {
+function buildTree(items: any[]) {
   const root = []
   const map = new Map()
   

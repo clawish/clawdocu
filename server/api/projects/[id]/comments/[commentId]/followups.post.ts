@@ -1,5 +1,6 @@
 // Add a followup to a comment on the specified branch
 import { getProject } from '~~/server/db/index'
+import { forgeFetch } from '~~/server/utils/forge'
 
 export default defineEventHandler(async (event) => {
   const projectId = event.context.params?.id
@@ -13,12 +14,6 @@ export default defineEventHandler(async (event) => {
 
   if (!branch) {
     throw createError({ statusCode: 400, message: 'Branch is required' })
-  }
-
-  const config = useRuntimeConfig()
-  const token = config.githubToken || process.env.GITHUB_TOKEN
-  if (!token) {
-    throw createError({ statusCode: 500, message: 'GITHUB_TOKEN not configured' })
   }
 
   const proj = await getProject(projectId)
@@ -35,14 +30,9 @@ export default defineEventHandler(async (event) => {
   let parsed: any = { files: [] }
 
   try {
-    const res = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}?ref=${encodeURIComponent(branch)}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json'
-        }
-      }
+    const res = await forgeFetch(
+      proj,
+      `/repos/${owner}/${repo}/contents/${commentPath}?ref=${encodeURIComponent(branch)}`
     )
 
     if (res.ok) {
@@ -80,7 +70,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Comment not found' })
   }
 
-  // Write back to GitHub on the specified branch
+  // Write back to the forge on the specified branch
   const encodedContent = Buffer.from(JSON.stringify(parsed, null, 2)).toString('base64')
   const putBody: any = {
     message: `Add followup to comment ${commentId}`,
@@ -89,18 +79,11 @@ export default defineEventHandler(async (event) => {
   }
   if (sha) putBody.sha = sha
 
-  const putRes = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}`,
-    {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(putBody)
-    }
-  )
+  const putRes = await forgeFetch(proj, `/repos/${owner}/${repo}/contents/${commentPath}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(putBody)
+  })
 
   if (!putRes.ok) {
     const error = await putRes.text()

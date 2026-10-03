@@ -49,6 +49,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     adminPassword: process.env.ADMIN_PASSWORD,
     githubToken: process.env.GITHUB_TOKEN,
+    giteeToken: process.env.GITEE_TOKEN,
     databasePath: process.env.DATABASE_PATH,
     version: pkg.version,
     public: {

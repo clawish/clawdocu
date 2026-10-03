@@ -1,30 +1,26 @@
+// Authenticated user info — GitHub primary; falls back to Gitee when only
+// GITEE_TOKEN is configured. Both APIs return the same fields we display.
+import { getForgeConfig, forgeFetch } from '~~/server/utils/forge'
+
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
-  const token = config.githubToken || process.env.GITHUB_TOKEN
-  if (!token) {
-    throw createError({
-      statusCode: 500,
-      message: 'GITHUB_TOKEN not configured'
-    })
-  }
-  
-  // Get authenticated user info
-  const res = await fetch('https://api.github.com/user', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github.v3+json'
-    }
-  })
-  
+  const hasGithub = !!(config.githubToken || process.env.GITHUB_TOKEN)
+  const hasGitee = !!(config.giteeToken || process.env.GITEE_TOKEN)
+
+  const source = hasGithub || !hasGitee ? 'github' : 'gitee'
+  const forge = getForgeConfig(source)
+
+  const res = await forgeFetch({ source }, '/user')
+
   if (!res.ok) {
     throw createError({
       statusCode: 500,
       message: 'Failed to fetch user info'
     })
   }
-  
+
   const user = await res.json()
-  
+
   return {
     login: user.login,
     name: user.name,
