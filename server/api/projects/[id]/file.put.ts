@@ -1,5 +1,6 @@
-// Save file content to GitHub
+// Save file content to forge (GitHub or Gitee by project source)
 import { getProject } from '~~/server/db/index'
+import { projectForge } from '~~/server/utils/forge'
 
 export default defineEventHandler(async (event) => {
   const projectId = event.context.params?.id
@@ -14,19 +15,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Branch is required' })
   }
 
-  const config = useRuntimeConfig()
-  const token = config.githubToken || process.env.GITHUB_TOKEN
-  if (!token) {
-    throw createError({ statusCode: 500, message: 'GITHUB_TOKEN not configured' })
-  }
-
   const proj = await getProject(projectId)
   if (!proj) {
     throw createError({ statusCode: 404, message: 'Project not found' })
   }
 
-  const owner = proj.fullName.split('/')[0]
-  const repo = proj.fullName.split('/')[1]
+  const forge = projectForge(proj)
 
   const encodedContent = Buffer.from(content).toString('base64')
   const commitMessage = message || `Update ${filePath}`
@@ -38,23 +32,16 @@ export default defineEventHandler(async (event) => {
   }
   if (sha) putBody.sha = sha
 
-  const res = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
-    {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(putBody),
-    }
-  )
+  const res = await forgeFetch(proj, `/repos/${proj.fullName}/contents/${filePath}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(putBody),
+  })
 
   if (!res.ok) {
     const error = await res.text()
-    console.error('[file.put] GitHub API error:', error)
-    throw createError({ statusCode: res.status, message: 'Failed to save file to GitHub' })
+    console.error('[file.put] Forge API error:', error)
+    throw createError({ statusCode: res.status, message: 'Failed to save file to forge' })
   }
 
   const data = await res.json()

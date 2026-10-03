@@ -1,5 +1,6 @@
-// Delete file/folder from GitHub
+// Delete file/folder from forge (GitHub or Gitee by project source)
 import { getProject } from '~~/server/db/index'
+import { forgeFetch } from '~~/server/utils/forge'
 
 export default defineEventHandler(async (event) => {
   const projectId = event.context.params?.id
@@ -8,12 +9,6 @@ export default defineEventHandler(async (event) => {
   
   if (!filePath) {
     throw createError({ statusCode: 400, message: 'File path is required' })
-  }
-  
-  const config = useRuntimeConfig()
-  const token = config.githubToken || process.env.GITHUB_TOKEN
-  if (!token) {
-    throw createError({ statusCode: 500, message: 'GITHUB_TOKEN not configured' })
   }
   
   // Get project from database
@@ -27,15 +22,7 @@ export default defineEventHandler(async (event) => {
   const repo = proj.fullName.split('/')[1]
   
   // First get the file/folder info
-  const getRes = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}?ref=${branch}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.v3+json'
-      }
-    }
-  )
+  const getRes = await forgeFetch(proj, `/repos/${owner}/${repo}/contents/${filePath}?ref=${branch}`)
   
   if (!getRes.ok) {
     throw createError({ statusCode: getRes.status, message: 'File not found' })
@@ -46,15 +33,7 @@ export default defineEventHandler(async (event) => {
   // Check if it's a directory (array of items)
   if (Array.isArray(itemData)) {
     // It's a directory - delete all files inside using Git tree API
-    const treeRes = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json'
-        }
-      }
-    )
+    const treeRes = await forgeFetch(proj, `/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`)
     
     if (!treeRes.ok) {
       throw createError({ statusCode: treeRes.status, message: 'Failed to get repository tree' })
@@ -72,15 +51,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Get the latest commit SHA
-    const refRes = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json'
-        }
-      }
-    )
+    const refRes = await forgeFetch(proj, `/repos/${owner}/${repo}/git/refs/heads/${branch}`)
     
     if (!refRes.ok) {
       throw createError({ statusCode: refRes.status, message: 'Failed to get branch ref' })
@@ -98,21 +69,14 @@ export default defineEventHandler(async (event) => {
     }))
     
     // Create a new tree
-    const createTreeRes = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/git/trees`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          base_tree: baseTreeSha,
-          tree: newTree
-        })
-      }
-    )
+    const createTreeRes = await forgeFetch(proj, `/repos/${owner}/${repo}/git/trees`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        base_tree: baseTreeSha,
+        tree: newTree
+      })
+    })
     
     if (!createTreeRes.ok) {
       const error = await createTreeRes.text()
@@ -122,22 +86,15 @@ export default defineEventHandler(async (event) => {
     const newTreeData = await createTreeRes.json()
     
     // Create a commit
-    const commitRes = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/git/commits`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          message: `Delete ${filePath}`,
-          tree: newTreeData.sha,
-          parents: [baseTreeSha]
-        })
-      }
-    )
+    const commitRes = await forgeFetch(proj, `/repos/${owner}/${repo}/git/commits`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `Delete ${filePath}`,
+        tree: newTreeData.sha,
+        parents: [baseTreeSha]
+      })
+    })
     
     if (!commitRes.ok) {
       const error = await commitRes.text()
@@ -147,20 +104,13 @@ export default defineEventHandler(async (event) => {
     const commitData = await commitRes.json()
     
     // Update the branch ref
-    const updateRefRes = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`,
-      {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sha: commitData.sha
-        })
-      }
-    )
+    const updateRefRes = await forgeFetch(proj, `/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sha: commitData.sha
+      })
+    })
     
     if (!updateRefRes.ok) {
       const error = await updateRefRes.text()
@@ -171,22 +121,15 @@ export default defineEventHandler(async (event) => {
   }
   
   // It's a file - delete using contents API
-  const deleteRes = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
-    {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        message: `Delete ${filePath}`,
-        sha: itemData.sha,
-        branch: branch
-      })
-    }
-  )
+  const deleteRes = await forgeFetch(proj, `/repos/${owner}/${repo}/contents/${filePath}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: `Delete ${filePath}`,
+      sha: itemData.sha,
+      branch: branch
+    })
+  })
   
   if (!deleteRes.ok) {
     const error = await deleteRes.text()

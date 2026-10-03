@@ -1,16 +1,11 @@
-// Get comments for a file from GitHub
+// Get comments for a file from the forge (GitHub or Gitee by project source)
 import { getProject } from '~~/server/db/index'
+import { forgeFetch } from '~~/server/utils/forge'
 
 export default defineEventHandler(async (event) => {
   const projectId = event.context.params?.id
   const filePath = getQuery(event).path as string | undefined
   const branch = (getQuery(event).branch as string) || 'main'
-  
-  const config = useRuntimeConfig()
-  const token = config.githubToken || process.env.GITHUB_TOKEN
-  if (!token) {
-    throw createError({ statusCode: 500, message: 'GITHUB_TOKEN not configured' })
-  }
   
   // Get project from database
   const proj = await getProject(projectId)
@@ -23,16 +18,11 @@ export default defineEventHandler(async (event) => {
   const repo = proj.fullName.split('/')[1]
   const commentPath = '.clawdocu-comments/comments.json'
   
-  // Try to fetch comments from GitHub on the specified branch
+  // Try to fetch comments from the forge on the specified branch
   try {
-    const res = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}?ref=${encodeURIComponent(branch)}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json'
-        }
-      }
+    const res = await forgeFetch(
+      proj,
+      `/repos/${owner}/${repo}/contents/${commentPath}?ref=${encodeURIComponent(branch)}`
     )
     
     if (!res.ok) {

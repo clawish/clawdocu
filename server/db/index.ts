@@ -38,6 +38,7 @@ export function getDatabase(): LibSQLDatabase<typeof schema> {
         name TEXT NOT NULL,
         full_name TEXT NOT NULL,
         description TEXT,
+        source TEXT NOT NULL DEFAULT 'github',
         created_at INTEGER
       )
     `)
@@ -69,7 +70,7 @@ export async function getProject(id: string) {
   return results[0]
 }
 
-export async function createProject(project: { name: string; fullName: string; description: string | null, id?: string }) {
+export async function createProject(project: { name: string; fullName: string; description: string | null, id?: string, source?: string }) {
   const db = getDatabase()
   const id = project.id || nanoid()
   await db.insert(schema.projects).values({
@@ -77,6 +78,7 @@ export async function createProject(project: { name: string; fullName: string; d
     name: project.name,
     fullName: project.fullName,
     description: project.description,
+    source: project.source || 'github',
   })
   return id
 }

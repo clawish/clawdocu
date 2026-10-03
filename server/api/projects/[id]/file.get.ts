@@ -1,5 +1,5 @@
-// Get file content from GitHub
 import { getProject } from '~~/server/db/index'
+import { projectForge } from '~~/server/utils/forge'
 
 export default defineEventHandler(async (event) => {
   const projectId = event.context.params?.id
@@ -10,12 +10,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'File path is required' })
   }
   
-  const config = useRuntimeConfig()
-  const token = config.githubToken || process.env.GITHUB_TOKEN
-  if (!token) {
-    throw createError({ statusCode: 500, message: 'GITHUB_TOKEN not configured' })
-  }
-  
   // Get project from database
   const proj = await getProject(projectId)
   
@@ -23,18 +17,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Project not found' })
   }
   
-  // Get file content from GitHub
-  const url = `https://api.github.com/repos/${proj.fullName}/contents/${filePath}?ref=${branch}`
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github.v3+json'
-    }
-  })
+  // Get file content (GitHub or Gitee by project source)
+  const res = await forgeFetch(proj, `/repos/${proj.fullName}/contents/${filePath}?ref=${branch}`)
   
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}))
-    console.error(`[file.get] GitHub API error: ${res.status}`, { 
+    console.error(`[file.get] Forge API error: ${res.status}`, { 
       projectId, 
       filePath, 
       branch,
@@ -50,7 +38,7 @@ export default defineEventHandler(async (event) => {
     
     throw createError({ 
       statusCode: res.status, 
-      message: errorData.message || 'Failed to fetch file from GitHub' 
+      message: errorData.message || 'Failed to fetch file from forge' 
     })
   }
   

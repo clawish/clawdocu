@@ -1,5 +1,6 @@
-// Sync comments to git repository on the specified branch
+// Sync comments to the forge (GitHub or Gitee) on the specified branch
 import { getProject } from '~~/server/db/index'
+import { forgeFetch } from '~~/server/utils/forge'
 import { CLAW_GUIDE_TEMPLATE } from '~~/server/utils/claw-guide'
 
 export default defineEventHandler(async (event) => {
@@ -9,12 +10,6 @@ export default defineEventHandler(async (event) => {
   
   if (!branch) {
     throw createError({ statusCode: 400, message: 'Branch is required' })
-  }
-  
-  const config = useRuntimeConfig()
-  const token = config.githubToken || process.env.GITHUB_TOKEN
-  if (!token) {
-    throw createError({ statusCode: 500, message: 'GITHUB_TOKEN not configured' })
   }
   
   // Get project from database
@@ -27,7 +22,7 @@ export default defineEventHandler(async (event) => {
   const owner = proj.fullName.split('/')[0]
   const repo = proj.fullName.split('/')[1]
   const commentPath = '.clawdocu-comments/comments.json'
-  const clawdocuUrl = config.public?.clawdocuUrl || process.env.CLAWDOCU_URL || 'https://clawdocu.example.com'
+  const clawdocuUrl = useRuntimeConfig().public?.clawdocuUrl || process.env.CLAWDOCU_URL || 'https://clawdocu.example.com'
   
   // Convert from Record<string, Comment[]> to files array format
   const files: any[] = []
@@ -58,14 +53,9 @@ export default defineEventHandler(async (event) => {
   let sha = null
   let folderExists = false
   try {
-    const checkRes = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}?ref=${encodeURIComponent(branch)}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json'
-        }
-      }
+    const checkRes = await forgeFetch(
+      proj,
+      `/repos/${owner}/${repo}/contents/${commentPath}?ref=${encodeURIComponent(branch)}`
     )
     if (checkRes.ok) {
       const data = await checkRes.json()
@@ -95,38 +85,24 @@ export default defineEventHandler(async (event) => {
     
     // Create both files on the branch
     await Promise.all([
-      fetch(
-        `https://api.github.com/repos/${owner}/${repo}/contents/.clawdocu-comments/metadata.json`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            message: 'Add ClawDocu metadata',
-            content: metadataEncoded,
-            branch
-          })
-        }
-      ),
-      fetch(
-        `https://api.github.com/repos/${owner}/${repo}/contents/.clawdocu-comments/claw-guide.md`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            message: 'Add ClawDocu guide for CLAWs',
-            content: clawGuideEncoded,
-            branch
-          })
-        }
-      )
+      forgeFetch(proj, `/repos/${owner}/${repo}/contents/.clawdocu-comments/metadata.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: 'Add ClawDocu metadata',
+          content: metadataEncoded,
+          branch
+        })
+      }),
+      forgeFetch(proj, `/repos/${owner}/${repo}/contents/.clawdocu-comments/claw-guide.md`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: 'Add ClawDocu guide for CLAWs',
+          content: clawGuideEncoded,
+          branch
+        })
+      })
     ])
   }
   
@@ -141,18 +117,11 @@ export default defineEventHandler(async (event) => {
     putBody.sha = sha
   }
   
-  const res = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${commentPath}`,
-    {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(putBody)
-    }
-  )
+  const res = await forgeFetch(proj, `/repos/${owner}/${repo}/contents/${commentPath}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(putBody)
+  })
   
   if (!res.ok) {
     const error = await res.text()
