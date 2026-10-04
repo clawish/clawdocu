@@ -30,29 +30,48 @@ export function getDatabase(): LibSQLDatabase<typeof schema> {
     }
 
     client = createClient({ url: `file:${dbPath}` })
-    
-    // Create tables if they don't exist
-    client.execute(`
-      CREATE TABLE IF NOT EXISTS projects (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        full_name TEXT NOT NULL,
-        description TEXT,
-        source TEXT NOT NULL DEFAULT 'github',
-        created_at INTEGER
-      )
-    `)
-    
-    client.execute(`
-      CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-      )
-    `)
-    
+
+    // Fire-and-forget fallback (same pattern as before). The authoritative,
+    // awaited schema check runs in server/plugins/startup.ts via ensureSchema(),
+    // so tables/columns are guaranteed before the server accepts traffic.
+    ensureSchema().catch((err) => console.error('[DB] ensureSchema failed:', err))
+
     db = drizzle(client, { schema })
   }
   return db
+}
+
+/**
+ * Create tables if missing and heal databases from older versions
+ * (e.g. add columns introduced after the DB was first created —
+ * CREATE TABLE IF NOT EXISTS can't alter existing tables).
+ * Awaited by the startup Nitro plugin before traffic is accepted;
+ * the full baseline for fresh installs lives in server/db/migrations/
+ * (npm run db:migrate).
+ */
+export async function ensureSchema(): Promise<void> {
+  if (!client) throw new Error('[DB] client not initialised — call getDatabase() first')
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      full_name TEXT NOT NULL,
+      description TEXT,
+      source TEXT NOT NULL DEFAULT 'github',
+      created_at INTEGER
+    )
+  `)
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `)
+  const projectCols = await client.execute(`PRAGMA table_info(projects)`)
+  if (!projectCols.rows.some((row) => row.name === 'source')) {
+    console.log('[DB] Adding missing column: projects.source')
+    await client.execute(`ALTER TABLE projects ADD COLUMN source TEXT NOT NULL DEFAULT 'github'`)
+  }
 }
 
 // Helper functions using Drizzle

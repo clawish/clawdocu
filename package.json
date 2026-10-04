@@ -1,6 +1,6 @@
 {
   "name": "clawdocu",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,10 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:migrate:prod": "drizzle-kit migrate"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",
@@ -27,6 +30,7 @@
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
-    "@iconify-json/lucide": "^1.2.105"
+    "@iconify-json/lucide": "^1.2.105",
+    "drizzle-kit": "^0.31.11"
   }
 }
