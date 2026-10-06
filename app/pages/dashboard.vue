@@ -186,7 +186,7 @@ const filteredRepos = computed(() => {
               <button
                 @click="switchSource('gitee')"
                 class="px-2.5 py-1 transition-colors border-l border-gray-200"
-                :class="repoSource === 'gitee' ? 'bg-red-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'"
+                :class="repoSource === 'gitee' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'"
               >Gitee</button>
             </div>
           </div>
