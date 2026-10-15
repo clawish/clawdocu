@@ -1,6 +1,6 @@
 // Add a followup to a comment on the specified branch
 import { getProject } from '~~/server/db/index'
-import { forgeFetch, fetchForgeTextFile } from '~~/server/utils/forge'
+import { fetchForgeTextFile, putForgeFile } from '~~/server/utils/forge'
 
 export default defineEventHandler(async (event) => {
   const projectId = event.context.params?.id
@@ -63,24 +63,17 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Comment not found' })
   }
 
-  // Write back to the forge on the specified branch
+  // Write back to the forge on the specified branch (adaptive PUT/POST)
   const encodedContent = Buffer.from(JSON.stringify(parsed, null, 2)).toString('base64')
-  const putBody: any = {
-    message: `Add followup to comment ${commentId}`,
-    content: encodedContent,
-    branch
-  }
-  if (sha) putBody.sha = sha
+  const writeRes = await putForgeFile(
+    proj, owner, repo, commentPath, branch,
+    encodedContent,
+    `Add followup to comment ${commentId}`,
+    sha,
+  )
 
-  const putRes = await forgeFetch(proj, `/repos/${owner}/${repo}/contents/${commentPath}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(putBody)
-  })
-
-  if (!putRes.ok) {
-    const error = await putRes.text()
-    console.error('Failed to add followup:', error)
+  if (!writeRes.ok) {
+    console.error('Failed to add followup:', writeRes.error)
     throw createError({ statusCode: 500, message: 'Failed to add followup' })
   }
 
