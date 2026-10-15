@@ -1,6 +1,6 @@
 // Sync comments to the forge (GitHub or Gitee) on the specified branch
 import { getProject } from '~~/server/db/index'
-import { forgeFetch, fetchForgeFileSha } from '~~/server/utils/forge'
+import { forgeFetch, fetchForgeFileSha, putForgeFile } from '~~/server/utils/forge'
 import { CLAW_GUIDE_TEMPLATE } from '~~/server/utils/claw-guide'
 
 export default defineEventHandler(async (event) => {
@@ -73,49 +73,28 @@ export default defineEventHandler(async (event) => {
       .replace(/{{PROJECT_ID}}/g, projectId)
     const clawGuideEncoded = Buffer.from(clawGuideContent).toString('base64')
     
-    // Create both files on the branch
-    await Promise.all([
-      forgeFetch(proj, `/repos/${owner}/${repo}/contents/.clawdocu-comments/metadata.json`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: 'Add ClawDocu metadata',
-          content: metadataEncoded,
-          branch
-        })
-      }),
-      forgeFetch(proj, `/repos/${owner}/${repo}/contents/.clawdocu-comments/claw-guide.md`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: 'Add ClawDocu guide for CLAWs',
-          content: clawGuideEncoded,
-          branch
-        })
-      })
+    // Create both files on the branch (create-verb adaptive: GitHub PUT,
+    // Gitee POST when PUT-without-sha is rejected)
+    const results = await Promise.all([
+      putForgeFile(proj, owner, repo, '.clawdocu-comments/metadata.json', branch, metadataEncoded, 'Add ClawDocu metadata'),
+      putForgeFile(proj, owner, repo, '.clawdocu-comments/claw-guide.md', branch, clawGuideEncoded, 'Add ClawDocu guide for CLAWs'),
     ])
+    const failed = results.find((r) => !r.ok)
+    if (failed) {
+      console.error('[sync] first-save sidecar creation failed:', failed.error)
+    }
   }
   
-  // Create or update comments.json on the branch
-  const putBody: any = {
-    message: files.length > 0 ? 'Update comments' : 'Remove comments',
-    content: encodedContent,
-    branch
-  }
-  
-  if (sha) {
-    putBody.sha = sha
-  }
-  
-  const res = await forgeFetch(proj, `/repos/${owner}/${repo}/contents/${commentPath}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(putBody)
-  })
-  
-  if (!res.ok) {
-    const error = await res.text()
-    console.error('Failed to sync comments:', error)
+  // Create or update comments.json on the branch (adaptive PUT/POST)
+  const writeRes = await putForgeFile(
+    proj, owner, repo, commentPath, branch,
+    encodedContent,
+    files.length > 0 ? 'Update comments' : 'Remove comments',
+    sha,
+  )
+
+  if (!writeRes.ok) {
+    console.error('Failed to sync comments:', writeRes.error)
     throw createError({ statusCode: 500, message: 'Failed to sync comments' })
   }
   

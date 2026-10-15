@@ -83,31 +83,6 @@ function decodeBase64Text(b64: string): string {
   return Buffer.from(b64, 'base64').toString('utf-8')
 }
 
-/**
- * Locate a file's blob sha via the git trees API — works for dot-directories
- * and any contents-API quirk on both forges (Gitee returns 200 `{}` for some
- * contents lookups; the trees API always lists real paths).
- */
-async function findBlobShaViaTree(
-  proj: { source?: string | null },
-  owner: string,
-  repo: string,
-  filePath: string,
-  branch: string,
-): Promise<string | null> {
-  try {
-    const res = await forgeFetch(proj, `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`)
-    if (!res.ok) return null
-    const data: any = await res.json().catch(() => null)
-    if (!data || !Array.isArray(data.tree)) return null
-    if (data.truncated) console.warn(`[forge] tree listing truncated for ${owner}/${repo}@${branch} — sha lookup may miss`)
-    const entry = data.tree.find((e: any) => e?.type === 'blob' && e?.path === filePath)
-    return entry?.sha ? String(entry.sha) : null
-  } catch {
-    return null
-  }
-}
-
 /** Fetch a blob's base64 text by sha via the git blobs API (both forges). */
 async function fetchBlobText(
   proj: { source?: string | null },
@@ -133,9 +108,9 @@ async function fetchBlobText(
  *
  * Gitee's contents API does not always include usable data where GitHub does
  * (observed in prod: HTTP 200 with body `{}` — no content, no sha, no git_url).
- * Fallback chain: inline content → blob by contents-sha → blob via trees API.
- * Returns null when the file doesn't exist or the shape is unknown — callers
- * must treat null as "no file", never crash.
+ * Fallback chain: inline content → blob by contents-sha → blob via trees API
+ * (branch name, then commit sha). Returns null when the file doesn't exist or
+ * the shape is unknown — callers must treat null as "no file", never crash.
  */
 export async function fetchForgeTextFile(
   proj: { source?: string | null },
@@ -178,9 +153,87 @@ export async function fetchForgeTextFile(
 }
 
 /**
- * Get a file's blob sha (for conditional PUTs). Contents API first, trees API
- * as fallback — Gitee's `{}` responses carry no sha, and syncing without the
- * real sha makes Gitee reject the PUT ("sha is missing"/"sha is empty").
+ * Locate a file's blob sha via the git trees API, with two ref spellings:
+ * 1. branch name directly (GitHub accepts this; Gitee usually wants a commit
+ *    sha — a 404 just means "try the other way")
+ * 2. resolve the branch to its commit sha first, then list that tree
+ * Recursive so dot-directories are covered without a second call.
+ */
+async function findBlobShaViaTree(
+  proj: { source?: string | null },
+  owner: string,
+  repo: string,
+  filePath: string,
+  branch: string,
+): Promise<string | null> {
+  const listTree = async (ref: string): Promise<any[] | null> => {
+    try {
+      const res = await forgeFetch(proj, `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`)
+      if (!res.ok) return null
+      const data: any = await res.json().catch(() => null)
+      if (!data || !Array.isArray(data.tree)) return null
+      if (data.truncated) console.warn(`[forge] tree listing truncated for ${owner}/${repo}@${ref} — sha lookup may miss`)
+      return data.tree
+    } catch {
+      return null
+    }
+  }
+
+  let tree = await listTree(branch)
+  if (tree === null) {
+    // Branch name rejected — resolve it to a commit sha and retry.
+    try {
+      const branchRes = await forgeFetch(proj, `/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`)
+      if (branchRes.ok) {
+        const branchData: any = await branchRes.json().catch(() => null)
+        const commitSha = branchData?.commit?.commit?.sha || branchData?.commit?.sha || null
+        if (typeof commitSha === 'string' && commitSha) {
+          tree = await listTree(commitSha)
+        }
+      }
+    } catch {
+      // keep tree = null
+    }
+  }
+
+  if (!tree) return null
+  const entry = tree.find((e: any) => e?.type === 'blob' && e?.path === filePath)
+  return entry?.sha ? String(entry.sha) : null
+}
+
+/**
+ * Locate a file's blob sha by listing its parent directory via the contents
+ * API. Gitee returns `{}` for dot-FILE lookups, but a directory listing of
+ * `.clawdocu-comments/` may still work — cheap to try before the trees API.
+ */
+async function findBlobShaViaDirListing(
+  proj: { source?: string | null },
+  owner: string,
+  repo: string,
+  filePath: string,
+  branch: string,
+): Promise<string | null> {
+  const dir = filePath.includes('/') ? filePath.slice(0, filePath.lastIndexOf('/')) : ''
+  if (!dir) return null
+  try {
+    const res = await forgeFetch(proj, `/repos/${owner}/${repo}/contents/${dir}?ref=${encodeURIComponent(branch)}`)
+    if (!res.ok) return null
+    const data: any = await res.json().catch(() => null)
+    if (!Array.isArray(data)) return null
+    const entry = data.find((e: any) => e?.type === 'file' && e?.path === filePath)
+    return entry?.sha ? String(entry.sha) : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Get a file's blob sha (for conditional PUTs), exhausting every source:
+ * 1. contents API inline sha (GitHub's normal shape)
+ * 2. parent-directory listing (Gitee lies about dot-files but may list the dir)
+ * 3. git trees API — branch name first, then commit sha
+ * Gitee's `{}` responses carry no sha, and syncing without the real sha gets
+ * the PUT rejected ("sha is missing"/"sha is empty").
  */
 export async function fetchForgeFileSha(
   proj: { source?: string | null },
@@ -201,7 +254,56 @@ export async function fetchForgeFileSha(
       }
     }
   } catch {
-    // fall through to trees API
+    // fall through to the next source
   }
+
+  const dirSha = await findBlobShaViaDirListing(proj, owner, repo, filePath, branch)
+  if (dirSha) return dirSha
+
   return findBlobShaViaTree(proj, owner, repo, filePath, branch)
+}
+
+/**
+ * Create or update a text file on the forge. GitHub's contents API unifies
+ * both under PUT (sha only for updates); Gitee v5 splits the verbs — PUT with
+ * sha for update, POST for creation — and rejects PUT-without-sha ("sha is
+ * missing"). Strategy: PUT with the resolved sha if we have one; if the PUT
+ * is rejected AND we had no sha (file shouldn't exist), retry once as POST.
+ */
+export async function putForgeFile(
+  proj: { source?: string | null },
+  owner: string,
+  repo: string,
+  filePath: string,
+  branch: string,
+  contentB64: string,
+  message: string,
+  sha?: string | null,
+): Promise<{ ok: boolean; status: number; error?: string }> {
+  const doPut = () =>
+    forgeFetch(proj, `/repos/${owner}/${repo}/contents/${filePath}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, content: contentB64, branch, ...(sha ? { sha } : {}) }),
+    })
+
+  let res = await doPut()
+  if (res.ok) return { ok: true, status: res.status }
+
+  const errText = await res.text().catch(() => '')
+  const shaRejected = !sha && /sha/i.test(errText)
+
+  if (shaRejected) {
+    // Gitee create-file semantics: try POST without sha.
+    const postRes = await forgeFetch(proj, `/repos/${owner}/${repo}/contents/${filePath}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, content: contentB64, branch }),
+    })
+    if (postRes.ok) return { ok: true, status: postRes.status }
+    const postErr = await postRes.text().catch(() => '')
+    return { ok: false, status: postRes.status, error: postErr || `POST ${postRes.status}` }
+  }
+
+  return { ok: false, status: res.status, error: errText || `PUT ${res.status}` }
 }
