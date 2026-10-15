@@ -103,6 +103,37 @@ async function fetchBlobText(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Read-through cache for comment-file reads. On Gitee every miss costs up to
+// 5 sequential round trips (contents `{}` → dir listing → trees by branch →
+// branches resolve → trees by commit) — and the file-open UI fires several of
+// these per navigation, repeatedly concluding "no comments yet". Cache both
+// hits and misses; writes invalidate. In-flight promises are shared so the
+// concurrent comment-counts + comments requests coalesce into one cascade.
+// ---------------------------------------------------------------------------
+
+const TEXT_FILE_CACHE_TTL_MS = 60_000
+const textFileCache = new Map<string, { at: number; value: { sha: string; text: string } | null }>()
+const textFileInFlight = new Map<string, Promise<{ sha: string; text: string } | null>>()
+
+function textFileCacheKey(proj: { source?: string | null }, owner: string, repo: string, filePath: string, branch: string): string {
+  return `${proj.source || 'github'}|${owner}|${repo}|${filePath}|${branch}`
+}
+
+/** Invalidate cached reads for a repo+branch after a successful write. */
+export function invalidateForgeTextFileCache(
+  proj: { source?: string | null },
+  owner: string,
+  repo: string,
+  branch: string,
+): void {
+  const prefix = `${proj.source || 'github'}|${owner}|${repo}|`
+  const suffix = `|${branch}`
+  for (const key of textFileCache.keys()) {
+    if (key.startsWith(prefix) && key.endsWith(suffix)) textFileCache.delete(key)
+  }
+}
+
 /**
  * Fetch a text file's content + sha from the forge (GitHub or Gitee).
  *
@@ -111,8 +142,41 @@ async function fetchBlobText(
  * Fallback chain: inline content → blob by contents-sha → blob via trees API
  * (branch name, then commit sha). Returns null when the file doesn't exist or
  * the shape is unknown — callers must treat null as "no file", never crash.
+ *
+ * Cached (hits AND misses, 60s TTL, in-flight coalesced); every successful
+ * write invalidates via invalidateForgeTextFileCache().
  */
 export async function fetchForgeTextFile(
+  proj: { source?: string | null },
+  owner: string,
+  repo: string,
+  filePath: string,
+  branch: string,
+): Promise<{ sha: string; text: string } | null> {
+  const key = textFileCacheKey(proj, owner, repo, filePath, branch)
+
+  const cached = textFileCache.get(key)
+  if (cached && Date.now() - cached.at < TEXT_FILE_CACHE_TTL_MS) {
+    return cached.value
+  }
+
+  const inFlight = textFileInFlight.get(key)
+  if (inFlight) return inFlight
+
+  const promise = fetchForgeTextFileUncached(proj, owner, repo, filePath, branch)
+    .then((value) => {
+      textFileCache.set(key, { at: Date.now(), value })
+      return value
+    })
+    .finally(() => {
+      textFileInFlight.delete(key)
+    })
+
+  textFileInFlight.set(key, promise)
+  return promise
+}
+
+async function fetchForgeTextFileUncached(
   proj: { source?: string | null },
   owner: string,
   repo: string,
@@ -144,7 +208,8 @@ export async function fetchForgeTextFile(
     if (text !== null) return { sha: treeSha, text }
   }
 
-  // Unknown shape — log it once so the next occurrence is diagnosable.
+  // Unknown shape — log it (at most once per TTL window per file, thanks to
+  // the cache) so a third response shape stays diagnosable.
   console.warn(
     `[forge] ${proj.source || 'github'} could not read ${filePath} on ${branch}` +
       (data && typeof data === 'object' ? ` (contents keys: ${JSON.stringify(Object.keys(data))}, status ${res.status})` : ` (status ${res.status})`),
@@ -288,7 +353,11 @@ export async function putForgeFile(
     })
 
   let res = await doPut()
-  if (res.ok) return { ok: true, status: res.status }
+  if (res.ok) {
+    // Writes change the file this cache describes — drop hits AND misses.
+    invalidateForgeTextFileCache(proj, owner, repo, branch)
+    return { ok: true, status: res.status }
+  }
 
   const errText = await res.text().catch(() => '')
   const shaRejected = !sha && /sha/i.test(errText)
@@ -300,7 +369,10 @@ export async function putForgeFile(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, content: contentB64, branch }),
     })
-    if (postRes.ok) return { ok: true, status: postRes.status }
+    if (postRes.ok) {
+      invalidateForgeTextFileCache(proj, owner, repo, branch)
+      return { ok: true, status: postRes.status }
+    }
     const postErr = await postRes.text().catch(() => '')
     return { ok: false, status: postRes.status, error: postErr || `POST ${postRes.status}` }
   }
