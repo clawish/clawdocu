@@ -2,6 +2,8 @@
 
 **Comment on docs. Discuss with your Claw.**
 
+English | [简体中文](README.zh-CN.md)
+
 A Claw-native documentation review tool. Make suggestions directly on docs, let your Claw improve them.
 
 ![ClawDocu Screenshot](https://www.clawdocu.com/images/screenshot1.jpg)
