@@ -1,6 +1,6 @@
 // Get comments for a file from the forge (GitHub or Gitee by project source)
 import { getProject } from '~~/server/db/index'
-import { forgeFetch } from '~~/server/utils/forge'
+import { fetchForgeTextFile } from '~~/server/utils/forge'
 
 export default defineEventHandler(async (event) => {
   const projectId = event.context.params?.id
@@ -14,24 +14,17 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Project not found' })
   }
   
-  const owner = proj.fullName.split('/')[0]
-  const repo = proj.fullName.split('/')[1]
+  const [owner, repo] = proj.fullName.split('/')
   const commentPath = '.clawdocu-comments/comments.json'
   
   // Try to fetch comments from the forge on the specified branch
   try {
-    const res = await forgeFetch(
-      proj,
-      `/repos/${owner}/${repo}/contents/${commentPath}?ref=${encodeURIComponent(branch)}`
-    )
-    
-    if (!res.ok) {
-      return { comments: [] }
+    const file = await fetchForgeTextFile(proj, owner, repo, commentPath, branch)
+    if (!file) {
+      return filePath ? { comments: [] } : { comments: {} }
     }
     
-    const data = await res.json()
-    const content = Buffer.from(data.content, 'base64').toString('utf-8')
-    const parsed = JSON.parse(content)
+    const parsed = JSON.parse(file.text)
     
     // If filePath is specified, return comments for that file only
     if (filePath) {
@@ -41,12 +34,12 @@ export default defineEventHandler(async (event) => {
     
     // Otherwise return all comments grouped by file
     const allComments: Record<string, any[]> = {}
-    for (const file of parsed.files || []) {
-      allComments[file.path] = file.comments || []
+    for (const f of parsed.files || []) {
+      allComments[f.path] = f.comments || []
     }
     
     return { comments: allComments }
   } catch (e) {
-    return { comments: [] }
+    return { comments: filePath ? [] : {} }
   }
 })

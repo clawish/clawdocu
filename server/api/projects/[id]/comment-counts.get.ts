@@ -1,6 +1,6 @@
 // Get comment counts for all files in a project
 import { getProject } from '~~/server/db/index'
-import { forgeFetch } from '~~/server/utils/forge'
+import { fetchForgeTextFile } from '~~/server/utils/forge'
 
 export default defineEventHandler(async (event) => {
   const projectId = event.context.params?.id
@@ -13,29 +13,21 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Project not found' })
   }
   
-  const owner = proj.fullName.split('/')[0]
-  const repo = proj.fullName.split('/')[1]
+  const [owner, repo] = proj.fullName.split('/')
   const commentPath = '.clawdocu-comments/comments.json'
   
-  // Try to fetch comments.json from the specified branch
   try {
-    const res = await forgeFetch(
-      proj,
-      `/repos/${owner}/${repo}/contents/${commentPath}?ref=${encodeURIComponent(branch)}`
-    )
-    
-    if (!res.ok) {
+    const file = await fetchForgeTextFile(proj, owner, repo, commentPath, branch)
+    if (!file) {
       return { counts: {} }
     }
     
-    const data = await res.json()
-    const content = Buffer.from(data.content, 'base64').toString('utf-8')
-    const parsed = JSON.parse(content)
+    const parsed = JSON.parse(file.text)
     
     // Build counts from files array
     const counts: Record<string, number> = {}
-    for (const file of parsed.files || []) {
-      counts[file.path] = (file.comments || []).length
+    for (const f of parsed.files || []) {
+      counts[f.path] = (f.comments || []).length
     }
     
     return { counts }
