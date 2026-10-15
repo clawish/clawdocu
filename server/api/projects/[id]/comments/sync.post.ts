@@ -1,6 +1,6 @@
 // Sync comments to the forge (GitHub or Gitee) on the specified branch
 import { getProject } from '~~/server/db/index'
-import { forgeFetch } from '~~/server/utils/forge'
+import { forgeFetch, fetchForgeFileSha } from '~~/server/utils/forge'
 import { CLAW_GUIDE_TEMPLATE } from '~~/server/utils/claw-guide'
 
 export default defineEventHandler(async (event) => {
@@ -49,22 +49,12 @@ export default defineEventHandler(async (event) => {
   const content = JSON.stringify({ files }, null, 2)
   const encodedContent = Buffer.from(content).toString('base64')
   
-  // Check if comments.json exists on this branch to get SHA
-  let sha = null
-  let folderExists = false
-  try {
-    const checkRes = await forgeFetch(
-      proj,
-      `/repos/${owner}/${repo}/contents/${commentPath}?ref=${encodeURIComponent(branch)}`
-    )
-    if (checkRes.ok) {
-      const data = await checkRes.json()
-      sha = data.sha
-      folderExists = true
-    }
-  } catch (e) {
-    // File doesn't exist yet
-  }
+  // Check if comments.json exists on this branch to get SHA.
+  // Contents-API-first with trees fallback: Gitee returns 200 `{}` for some
+  // files (no sha inside), and PUTting without the real blob sha gets rejected
+  // with "sha is missing"/"sha is empty".
+  const sha = await fetchForgeFileSha(proj, owner, repo, commentPath, branch)
+  const folderExists = sha !== null
   
   // If this is the first save on this branch, create metadata.json and claw-guide.md first
   if (!folderExists) {
