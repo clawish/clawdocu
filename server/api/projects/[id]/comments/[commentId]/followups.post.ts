@@ -1,6 +1,6 @@
 // Add a followup to a comment on the specified branch
 import { getProject } from '~~/server/db/index'
-import { forgeFetch } from '~~/server/utils/forge'
+import { forgeFetch, fetchForgeTextFile } from '~~/server/utils/forge'
 
 export default defineEventHandler(async (event) => {
   const projectId = event.context.params?.id
@@ -21,28 +21,21 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Project not found' })
   }
 
-  const owner = proj.fullName.split('/')[0]
-  const repo = proj.fullName.split('/')[1]
+  const [owner, repo] = proj.fullName.split('/')
   const commentPath = '.clawdocu-comments/comments.json'
 
   // Fetch current comments from the specified branch
-  let sha = null
+  let sha: string | null = null
   let parsed: any = { files: [] }
 
   try {
-    const res = await forgeFetch(
-      proj,
-      `/repos/${owner}/${repo}/contents/${commentPath}?ref=${encodeURIComponent(branch)}`
-    )
-
-    if (res.ok) {
-      const data = await res.json()
-      sha = data.sha
-      const content = Buffer.from(data.content, 'base64').toString('utf-8')
-      parsed = JSON.parse(content)
+    const file = await fetchForgeTextFile(proj, owner, repo, commentPath, branch)
+    if (file) {
+      sha = file.sha || null
+      parsed = JSON.parse(file.text)
     }
   } catch (e) {
-    // File doesn't exist yet
+    // File doesn't exist yet / unreadable — start from empty
   }
 
   // Find the comment and add followup
