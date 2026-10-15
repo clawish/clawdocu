@@ -79,41 +79,63 @@ export async function forgeFetch(
   })
 }
 
-// Fetch an absolute API URL (e.g. a blob `git_url` returned by the contents
-// API) with the project's forge auth. forgeFetch() only takes paths, so
-// absolute URLs need their own wrapper (Gitee still needs the token param).
-async function forgeFetchAbsolute(
-  proj: { source?: string | null },
-  url: string,
-  init: RequestInit = {},
-): Promise<Response> {
-  const forge = projectForge(proj)
-  let finalUrl = url
-  if (forge.source === 'gitee' && forge.accessToken) {
-    const sep = finalUrl.includes('?') ? '&' : '?'
-    finalUrl += `${sep}access_token=${encodeURIComponent(forge.accessToken)}`
-  }
-  return fetch(finalUrl, {
-    ...init,
-    headers: {
-      ...forge.headers,
-      ...(init.headers as Record<string, string> | undefined),
-    },
-  })
-}
-
 function decodeBase64Text(b64: string): string {
   return Buffer.from(b64, 'base64').toString('utf-8')
 }
 
 /**
+ * Locate a file's blob sha via the git trees API — works for dot-directories
+ * and any contents-API quirk on both forges (Gitee returns 200 `{}` for some
+ * contents lookups; the trees API always lists real paths).
+ */
+async function findBlobShaViaTree(
+  proj: { source?: string | null },
+  owner: string,
+  repo: string,
+  filePath: string,
+  branch: string,
+): Promise<string | null> {
+  try {
+    const res = await forgeFetch(proj, `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`)
+    if (!res.ok) return null
+    const data: any = await res.json().catch(() => null)
+    if (!data || !Array.isArray(data.tree)) return null
+    if (data.truncated) console.warn(`[forge] tree listing truncated for ${owner}/${repo}@${branch} — sha lookup may miss`)
+    const entry = data.tree.find((e: any) => e?.type === 'blob' && e?.path === filePath)
+    return entry?.sha ? String(entry.sha) : null
+  } catch {
+    return null
+  }
+}
+
+/** Fetch a blob's base64 text by sha via the git blobs API (both forges). */
+async function fetchBlobText(
+  proj: { source?: string | null },
+  owner: string,
+  repo: string,
+  sha: string,
+): Promise<string | null> {
+  try {
+    const res = await forgeFetch(proj, `/repos/${owner}/${repo}/git/blobs/${sha}`)
+    if (!res.ok) return null
+    const blob: any = await res.json().catch(() => null)
+    if (blob && typeof blob.content === 'string' && blob.content.length > 0) {
+      return decodeBase64Text(blob.content)
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Fetch a text file's content + sha from the forge (GitHub or Gitee).
  *
- * Gitee's contents API does not always include a usable `content` field where
- * GitHub does (observed: ERR_INVALID_ARG_TYPE from Buffer.from(undefined) in
- * prod). Fallback chain: data.content → data.git_url blob fetch → null.
- * Returns null when the file doesn't exist (non-ok) or the shape is unknown —
- * callers must treat null as "no file", never crash.
+ * Gitee's contents API does not always include usable data where GitHub does
+ * (observed in prod: HTTP 200 with body `{}` — no content, no sha, no git_url).
+ * Fallback chain: inline content → blob by contents-sha → blob via trees API.
+ * Returns null when the file doesn't exist or the shape is unknown — callers
+ * must treat null as "no file", never crash.
  */
 export async function fetchForgeTextFile(
   proj: { source?: string | null },
@@ -129,27 +151,57 @@ export async function fetchForgeTextFile(
   if (!res.ok) return null
 
   const data: any = await res.json().catch(() => null)
-  if (!data || typeof data !== 'object') return null
-
-  if (typeof data.content === 'string' && data.content.length > 0) {
-    return { sha: String(data.sha || ''), text: decodeBase64Text(data.content) }
+  if (data && typeof data === 'object') {
+    if (typeof data.content === 'string' && data.content.length > 0) {
+      return { sha: String(data.sha || ''), text: decodeBase64Text(data.content) }
+    }
+    // Contents shape without inline content (Gitee `{}`, or >1MB files):
+    // try the blob it names, then the trees API.
+    if (typeof data.sha === 'string' && data.sha) {
+      const text = await fetchBlobText(proj, owner, repo, data.sha)
+      if (text !== null) return { sha: data.sha, text }
+    }
   }
 
-  // No inline content (Gitee quirk / large file): fetch the blob it points to.
-  if (typeof data.git_url === 'string' && data.git_url) {
-    const blobRes = await forgeFetchAbsolute(proj, data.git_url)
-    if (blobRes.ok) {
-      const blob: any = await blobRes.json().catch(() => null)
-      if (blob && typeof blob.content === 'string' && blob.content.length > 0) {
-        return { sha: String(blob.sha || data.sha || ''), text: decodeBase64Text(blob.content) }
-      }
-    }
+  const treeSha = await findBlobShaViaTree(proj, owner, repo, filePath, branch)
+  if (treeSha) {
+    const text = await fetchBlobText(proj, owner, repo, treeSha)
+    if (text !== null) return { sha: treeSha, text }
   }
 
   // Unknown shape — log it once so the next occurrence is diagnosable.
   console.warn(
-    `[forge] ${proj.source || 'github'} contents response had no decodable content for ${filePath}`,
-    { keys: Object.keys(data), encoding: data.encoding, size: data.size, status: res.status },
+    `[forge] ${proj.source || 'github'} could not read ${filePath} on ${branch}` +
+      (data && typeof data === 'object' ? ` (contents keys: ${JSON.stringify(Object.keys(data))}, status ${res.status})` : ` (status ${res.status})`),
   )
   return null
+}
+
+/**
+ * Get a file's blob sha (for conditional PUTs). Contents API first, trees API
+ * as fallback — Gitee's `{}` responses carry no sha, and syncing without the
+ * real sha makes Gitee reject the PUT ("sha is missing"/"sha is empty").
+ */
+export async function fetchForgeFileSha(
+  proj: { source?: string | null },
+  owner: string,
+  repo: string,
+  filePath: string,
+  branch: string,
+): Promise<string | null> {
+  try {
+    const res = await forgeFetch(
+      proj,
+      `/repos/${owner}/${repo}/contents/${filePath}?ref=${encodeURIComponent(branch)}`,
+    )
+    if (res.ok) {
+      const data: any = await res.json().catch(() => null)
+      if (data && typeof data === 'object' && typeof data.sha === 'string' && data.sha) {
+        return data.sha
+      }
+    }
+  } catch {
+    // fall through to trees API
+  }
+  return findBlobShaViaTree(proj, owner, repo, filePath, branch)
 }
