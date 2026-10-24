@@ -1,6 +1,6 @@
 {
   "name": "clawdocu",
-  "version": "0.6.9",
+  "version": "0.6.10",
   "private": true,
   "type": "module",
   "scripts": {
@@ -32,5 +32,8 @@
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.105",
     "drizzle-kit": "^0.31.11"
+  },
+  "engines": {
+    "node": ">=24.22.1"
   }
 }
